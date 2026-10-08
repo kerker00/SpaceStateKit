@@ -2,7 +2,7 @@ import Foundation
 
 /// The parts of a SpaceAPI document (https://spaceapi.io) the apps use.
 ///
-/// Follows schema v15 and also reads the flat layout of v0.13, which many spaces still serve.
+/// Follows schema v15 and also reads the flat layout of v0.12 and older, which some spaces still serve.
 public struct SpaceInfo: Sendable, Hashable, Decodable {
     public var name: String
     public var logo: URL?
@@ -113,7 +113,7 @@ public struct SpaceInfo: Sendable, Hashable, Decodable {
 
     private enum CodingKeys: String, CodingKey {
         case space, logo, url, location, state, contact, feeds
-        // v0.13 kept these at the top level.
+        // v0.12 and older kept these at the top level; v0.13 moved them into `state` and `location`.
         case open, lastchange, status, address, lat, lon
     }
 
