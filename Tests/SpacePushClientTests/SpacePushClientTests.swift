@@ -61,7 +61,7 @@ struct SpacePushClientTests {
 
     @Test func sendsConfiguredHeaders() async throws {
         let log = RequestLog()
-        let headers = ["User-Agent": "SpaceState/2.0.0 (macOS 26.0)", "X-SpaceState-Install": "0f8fad5b-d9cb-469f-a165-70867728950e"]
+        let headers = ["User-Agent": "SpaceState/2.0.0 (macOS 26.0)"]
         let client = SpacePushClient(baseURL: Self.baseURL, headers: headers) { request in
             log.append(request)
             let response = HTTPURLResponse(url: request.url!, statusCode: 204, httpVersion: nil, headerFields: nil)!
@@ -73,8 +73,42 @@ struct SpacePushClientTests {
         #expect(log.all.count == 2)
         for request in log.all {
             #expect(request.value(forHTTPHeaderField: "User-Agent") == "SpaceState/2.0.0 (macOS 26.0)")
-            #expect(request.value(forHTTPHeaderField: "X-SpaceState-Install") == "0f8fad5b-d9cb-469f-a165-70867728950e")
+            #expect(request.value(forHTTPHeaderField: "X-SpaceState-First") == nil)
         }
+    }
+
+    @Test func reportsActivePeriodsOnceDelivered() async throws {
+        let log = RequestLog()
+        let periods = ActivePeriods(reported: [:], save: { _ in })
+        let client = SpacePushClient(baseURL: Self.baseURL, activePeriods: periods) { request in
+            log.append(request)
+            let response = HTTPURLResponse(url: request.url!, statusCode: 429, httpVersion: nil, headerFields: nil)!
+            return (Data(), response)
+        }
+        // An error answer still reached SpacePush, which counted the request.
+        _ = try? await client.mainframeRooms()
+        _ = try? await client.mainframeRooms()
+
+        #expect(log.all.map { $0.value(forHTTPHeaderField: "X-SpaceState-First") } == ["day, week, month", nil])
+    }
+
+    @Test func reportsActivePeriodsAgainAfterNetworkError() async throws {
+        let log = RequestLog()
+        let periods = ActivePeriods(reported: [:], save: { _ in })
+        let failing = SpacePushClient(baseURL: Self.baseURL, activePeriods: periods) { request in
+            log.append(request)
+            throw URLError(.notConnectedToInternet)
+        }
+        _ = try? await failing.mainframeRooms()
+        _ = try? await Self.client(log: log).mainframeRooms()
+        let working = SpacePushClient(baseURL: Self.baseURL, activePeriods: periods) { request in
+            log.append(request)
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (Data("{}".utf8), response)
+        }
+        _ = try? await working.mainframeRooms()
+
+        #expect(log.all.map { $0.value(forHTTPHeaderField: "X-SpaceState-First") } == ["day, week, month", nil, "day, week, month"])
     }
 
     @Test func unregisterSendsDelete() async throws {
