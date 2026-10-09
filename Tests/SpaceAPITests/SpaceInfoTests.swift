@@ -56,3 +56,24 @@ struct SpaceInfoTests {
         }
     }
 }
+
+struct SpaceInfoLinkTests {
+    @Test(arguments: [
+        ("https://example.org/", true),
+        ("http://example.org/space", true),
+        ("javascript:alert(1)", false),
+        ("file:///etc/passwd", false),
+        ("tel:+491234", false),
+        ("otherapp://open", false),
+        ("https:///no-host", false),
+        ("/relative/path", false),
+    ])
+    func keepsOnlyWebLinks(link: String, kept: Bool) throws {
+        let json = #"{"space":"A","url":"\#(link)","logo":"\#(link)","feeds":{"calendar":{"url":"\#(link)"}}}"#
+        let info = try JSONDecoder().decode(SpaceInfo.self, from: Data(json.utf8))
+
+        #expect((info.website != nil) == kept)
+        #expect((info.logo != nil) == kept)
+        #expect((info.calendar != nil) == kept)
+    }
+}

@@ -120,6 +120,14 @@ public struct SpaceInfo: Sendable, Hashable, Decodable {
     private struct Feeds: Decodable {
         struct Feed: Decodable {
             var url: URL?
+
+            private enum CodingKeys: String, CodingKey {
+                case url
+            }
+
+            init(from decoder: any Decoder) throws {
+                url = try decoder.container(keyedBy: CodingKeys.self).webURL(forKey: .url)
+            }
         }
 
         var calendar: Feed?
@@ -141,8 +149,8 @@ public struct SpaceInfo: Sendable, Hashable, Decodable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         name = try container.decode(String.self, forKey: .space)
-        logo = container.lossy(URL.self, forKey: .logo)
-        website = container.lossy(URL.self, forKey: .url)
+        logo = container.webURL(forKey: .logo)
+        website = container.webURL(forKey: .url)
         contact = container.lossy(Contact.self, forKey: .contact) ?? Contact()
         calendar = container.lossy(Feeds.self, forKey: .feeds)?.calendar?.url
 

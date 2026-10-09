@@ -8,6 +8,17 @@ extension KeyedDecodingContainer {
         (try? decodeIfPresent(type, forKey: key)) ?? nil
     }
 
+    /// Returns a web link, or nil unless it is an absolute http or https URL.
+    /// Spaces run their own endpoints; a link such as `javascript:`, `file:` or
+    /// another app's URL scheme must never reach a button in the app.
+    func webURL(forKey key: Key) -> URL? {
+        guard let url = lossy(URL.self, forKey: key),
+              let scheme = url.scheme?.lowercased(), scheme == "https" || scheme == "http",
+              url.host() != nil
+        else { return nil }
+        return url
+    }
+
     /// Returns a Unix timestamp in seconds as a date, or nil if it is missing or malformed.
     func lossyDate(forKey key: Key) -> Date? {
         lossy(Double.self, forKey: key).map(Date.init(timeIntervalSince1970:))

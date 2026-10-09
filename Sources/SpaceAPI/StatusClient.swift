@@ -2,6 +2,8 @@ import Foundation
 
 public enum StatusClientError: Error, Equatable {
     case httpStatus(Int)
+    /// The response exceeded `StatusClient.maxResponseBytes`.
+    case responseTooLarge
 }
 
 /// Fetches space data over HTTP.
@@ -10,9 +12,30 @@ public struct StatusClient: Sendable {
 
     private let load: Loader
 
-    /// - Parameter load: Performs the request. Tests pass a stub; the default uses the shared URL session.
-    public init(load: @escaping Loader = { try await URLSession.shared.data(for: $0) }) {
+    /// Larger responses are aborted: endpoints are run by third parties, and a
+    /// hostile one must not be able to exhaust the app's memory.
+    public static let maxResponseBytes = 256 * 1024
+
+    /// - Parameter load: Performs the request. Tests pass a stub; the default uses the shared URL session
+    ///   and stops reading after `maxResponseBytes`.
+    public init(load: @escaping Loader = StatusClient.limitedLoad) {
         self.load = load
+    }
+
+    @Sendable
+    public static func limitedLoad(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        if response.expectedContentLength > Int64(maxResponseBytes) {
+            throw StatusClientError.responseTooLarge
+        }
+        var data = Data()
+        for try await byte in bytes {
+            data.append(byte)
+            if data.count > maxResponseBytes {
+                throw StatusClientError.responseTooLarge
+            }
+        }
+        return (data, response)
     }
 
     /// Fetches a space directly from its own endpoint.
