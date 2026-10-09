@@ -1,4 +1,6 @@
 import Foundation
+import MainframeStatus
+import SpaceAPI
 
 /// The APNs environment a device token belongs to.
 public enum PushEnvironment: String, Sendable, Hashable, Encodable {
@@ -26,7 +28,8 @@ public enum SpacePushError: Error, Equatable {
     case httpStatus(Int, reason: String?)
 }
 
-/// Registers devices with SpacePush (`PUT` / `DELETE /v1/devices/<token>`).
+/// Talks to SpacePush: registers devices (`PUT` / `DELETE /v1/devices/<token>`) and reads
+/// the spaces' state, which SpacePush fetches once for all users (`GET /v1/…`).
 public struct SpacePushClient: Sendable {
     public typealias Loader = @Sendable (URLRequest) async throws -> (Data, URLResponse)
 
@@ -56,6 +59,21 @@ public struct SpacePushClient: Sendable {
         try await send(request(for: deviceToken, method: "DELETE"))
     }
 
+    /// The list of spaces, in the aggregator's format.
+    public func directory() async throws -> [DirectoryEntry] {
+        try SpaceDirectory.decode(await get(path: ["v1", "directory"]))
+    }
+
+    /// A space's SpaceAPI document as SpacePush last fetched it, at most a minute old.
+    public func space(at endpoint: URL) async throws -> SpaceInfo {
+        let data = try await get(path: ["v1", "spaces"], query: ["endpoint": endpoint.absoluteString])
+        return try JSONDecoder().decode(SpaceInfo.self, from: data)
+    }
+
+    public func mainframeRooms() async throws -> [MainframeRoom] {
+        try Mainframe.decodeRooms(await get(path: ["v1", "mainframe", "rooms"]))
+    }
+
     /// APNs device tokens travel as lowercase hex.
     public static func hex(_ deviceToken: Data) -> String {
         deviceToken.map { String(format: "%02x", $0) }.joined()
@@ -70,6 +88,25 @@ public struct SpacePushClient: Sendable {
         var error: String
     }
 
+    private func get(path: [String], query: [String: String] = [:]) async throws -> Data {
+        var url = baseURL
+        for component in path {
+            url.append(component: component)
+        }
+        if !query.isEmpty {
+            // Strict encoding: the value is a URL itself, and the server reads "+" as a space.
+            let unreserved = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-._~"))
+            var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+            components.percentEncodedQuery = query.sorted { $0.key < $1.key }
+                .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: unreserved)!)" }
+                .joined(separator: "&")
+            url = components.url!
+        }
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        return try await send(request)
+    }
+
     private func request(for deviceToken: Data, method: String) -> URLRequest {
         let url = baseURL.appending(components: "v1", "devices", Self.hex(deviceToken))
         var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
@@ -77,11 +114,13 @@ public struct SpacePushClient: Sendable {
         return request
     }
 
-    private func send(_ request: URLRequest) async throws {
+    @discardableResult
+    private func send(_ request: URLRequest) async throws -> Data {
         let (data, response) = try await load(request)
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
             let reason = try? JSONDecoder().decode(ErrorBody.self, from: data).error
             throw SpacePushError.httpStatus(http.statusCode, reason: reason)
         }
+        return data
     }
 }
