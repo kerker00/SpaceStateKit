@@ -34,23 +34,33 @@ public struct SpacePushClient: Sendable {
     public typealias Loader = @Sendable (URLRequest) async throws -> (Data, URLResponse)
 
     public let baseURL: URL
+    /// Sent with every request, e.g. `User-Agent` and `X-SpaceState-Install` for SpacePush's statistics.
+    public let headers: [String: String]
     private let load: Loader
 
     /// - Parameter load: Performs the request. Tests pass a stub; the default uses the shared URL session.
-    public init(baseURL: URL, load: @escaping Loader = { try await URLSession.shared.data(for: $0) }) {
+    public init(
+        baseURL: URL,
+        headers: [String: String] = [:],
+        load: @escaping Loader = { try await URLSession.shared.data(for: $0) }
+    ) {
         self.baseURL = baseURL
+        self.headers = headers
         self.load = load
     }
 
     /// Registers the device, replacing any earlier registration of the same token.
+    /// - Parameter platform: `"ios"` or `"macos"`, for SpacePush's statistics; nil leaves it out.
     public func register(
-        deviceToken: Data, environment: PushEnvironment, subscriptions: [PushSubscription]
+        deviceToken: Data, environment: PushEnvironment, subscriptions: [PushSubscription], platform: String? = nil
     ) async throws {
         var request = request(for: deviceToken, method: "PUT")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        request.httpBody = try encoder.encode(Registration(environment: environment, subscriptions: subscriptions))
+        request.httpBody = try encoder.encode(
+            Registration(environment: environment, platform: platform, subscriptions: subscriptions)
+        )
         try await send(request)
     }
 
@@ -81,6 +91,7 @@ public struct SpacePushClient: Sendable {
 
     private struct Registration: Encodable {
         var environment: PushEnvironment
+        var platform: String?
         var subscriptions: [PushSubscription]
     }
 
@@ -116,6 +127,10 @@ public struct SpacePushClient: Sendable {
 
     @discardableResult
     private func send(_ request: URLRequest) async throws -> Data {
+        var request = request
+        for (field, value) in headers {
+            request.setValue(value, forHTTPHeaderField: field)
+        }
         let (data, response) = try await load(request)
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
             let reason = try? JSONDecoder().decode(ErrorBody.self, from: data).error

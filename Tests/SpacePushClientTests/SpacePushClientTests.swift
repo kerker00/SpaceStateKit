@@ -49,6 +49,34 @@ struct SpacePushClientTests {
             """)
     }
 
+    @Test func registerSendsPlatformWhenGiven() async throws {
+        let log = RequestLog()
+        try await Self.client(log: log).register(
+            deviceToken: Self.token, environment: .production, subscriptions: [], platform: "macos"
+        )
+
+        let body = try #require(log.all.first?.httpBody)
+        #expect(String(decoding: body, as: UTF8.self) == #"{"environment":"production","platform":"macos","subscriptions":[]}"#)
+    }
+
+    @Test func sendsConfiguredHeaders() async throws {
+        let log = RequestLog()
+        let headers = ["User-Agent": "SpaceState/2.0.0 (macOS 26.0)", "X-SpaceState-Install": "0f8fad5b-d9cb-469f-a165-70867728950e"]
+        let client = SpacePushClient(baseURL: Self.baseURL, headers: headers) { request in
+            log.append(request)
+            let response = HTTPURLResponse(url: request.url!, statusCode: 204, httpVersion: nil, headerFields: nil)!
+            return (Data("[]".utf8), response)
+        }
+        _ = try? await client.directory()
+        try await client.unregister(deviceToken: Self.token)
+
+        #expect(log.all.count == 2)
+        for request in log.all {
+            #expect(request.value(forHTTPHeaderField: "User-Agent") == "SpaceState/2.0.0 (macOS 26.0)")
+            #expect(request.value(forHTTPHeaderField: "X-SpaceState-Install") == "0f8fad5b-d9cb-469f-a165-70867728950e")
+        }
+    }
+
     @Test func unregisterSendsDelete() async throws {
         let log = RequestLog()
         try await Self.client(log: log).unregister(deviceToken: Self.token)
