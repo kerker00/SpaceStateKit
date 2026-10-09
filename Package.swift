@@ -9,10 +9,13 @@ let package = Package(
         .library(name: "SpaceAPI", targets: ["SpaceAPI"]),
         // Extra rooms and states of Mainframe Oldenburg, specific to the SpaceState apps.
         .library(name: "MainframeStatus", targets: ["MainframeStatus"]),
+        // Registers devices with the SpacePush service.
+        .library(name: "SpacePushClient", targets: ["SpacePushClient"]),
     ],
     targets: [
         .target(name: "SpaceAPI"),
         .target(name: "MainframeStatus", dependencies: ["SpaceAPI"]),
+        .target(name: "SpacePushClient"),
         .testTarget(
             name: "SpaceAPITests",
             dependencies: ["SpaceAPI"],
@@ -23,5 +26,6 @@ let package = Package(
             dependencies: ["MainframeStatus", "SpaceAPI"],
             resources: [.copy("Fixtures")]
         ),
+        .testTarget(name: "SpacePushClientTests", dependencies: ["SpacePushClient"]),
     ]
 )
