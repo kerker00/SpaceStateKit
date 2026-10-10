@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 import MainframeStatus
 import SpaceAPI
 
@@ -38,14 +41,14 @@ public struct SpacePushClient: Sendable {
     public let headers: [String: String]
     /// Reports the first request of each day, week and month in `X-SpaceState-First`; nil sends nothing.
     public let activePeriods: ActivePeriods?
-    private let load: Loader
+    private let load: Loader?
 
-    /// - Parameter load: Performs the request. Tests pass a stub; the default uses the shared URL session.
+    /// - Parameter load: Performs the request. Tests pass a stub; the default uses a bounded URL session.
     public init(
         baseURL: URL,
         headers: [String: String] = [:],
         activePeriods: ActivePeriods? = nil,
-        load: @escaping Loader = { try await URLSession.shared.data(for: $0) }
+        load: Loader? = nil
     ) {
         self.baseURL = baseURL
         self.headers = headers
@@ -75,7 +78,7 @@ public struct SpacePushClient: Sendable {
 
     /// The list of spaces, in the aggregator's format.
     public func directory() async throws -> [DirectoryEntry] {
-        try SpaceDirectory.decode(await get(path: ["v1", "directory"]))
+        try SpaceDirectory.decode(await get(path: ["v1", "directory"], maximumBytes: StatusClient.maxDirectoryResponseBytes))
     }
 
     /// A space's SpaceAPI document as SpacePush last fetched it, at most a minute old.
@@ -103,7 +106,7 @@ public struct SpacePushClient: Sendable {
         var error: String
     }
 
-    private func get(path: [String], query: [String: String] = [:]) async throws -> Data {
+    private func get(path: [String], query: [String: String] = [:], maximumBytes: Int = StatusClient.maxResponseBytes) async throws -> Data {
         var url = baseURL
         for component in path {
             url.append(component: component)
@@ -119,7 +122,7 @@ public struct SpacePushClient: Sendable {
         }
         var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        return try await send(request)
+        return try await send(request, maximumBytes: maximumBytes)
     }
 
     private func request(for deviceToken: Data, method: String) -> URLRequest {
@@ -130,7 +133,7 @@ public struct SpacePushClient: Sendable {
     }
 
     @discardableResult
-    private func send(_ request: URLRequest) async throws -> Data {
+    private func send(_ request: URLRequest, maximumBytes: Int = StatusClient.maxResponseBytes) async throws -> Data {
         var request = request
         for (field, value) in headers {
             request.setValue(value, forHTTPHeaderField: field)
@@ -142,7 +145,12 @@ public struct SpacePushClient: Sendable {
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await load(request)
+            if let load {
+                (data, response) = try await load(request)
+            } else {
+                (data, response) = try await StatusClient.limitedLoad(request, maximumBytes: maximumBytes)
+            }
+            guard data.count <= maximumBytes else { throw StatusClientError.responseTooLarge }
         } catch {
             activePeriods?.finish(report, delivered: false)
             throw error

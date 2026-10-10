@@ -28,7 +28,13 @@ public enum SpaceDirectory {
                 guard let endpoint = raw.url, let info = raw.data else { return nil }
                 return DirectoryEntry(endpoint: endpoint, info: info, lastSeen: raw.lastSeen)
             }
-            .sorted { $0.info.name.localizedStandardCompare($1.info.name) == .orderedAscending }
+            .sorted { lhs, rhs in
+                let comparison = lhs.info.name.compare(rhs.info.name, options: [.numeric, .caseInsensitive],
+                                                       locale: Locale(identifier: "en_US_POSIX"))
+                return comparison == .orderedSame
+                    ? lhs.endpoint.absoluteString < rhs.endpoint.absoluteString
+                    : comparison == .orderedAscending
+            }
     }
 
     // Never throws, so one broken entry cannot fail the whole list.

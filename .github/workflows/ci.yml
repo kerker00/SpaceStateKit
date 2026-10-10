@@ -1,0 +1,25 @@
+name: Swift CI
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    container: swift:6.2-noble
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift --version
+      - run: swift build -c release
+      - run: swift test
+      - run: python3 IntegrationTests/run.py
+  macos:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: '6.2'
+      - run: swift --version
+      - run: swift build -c release
+      - run: swift test
+      - run: python3 IntegrationTests/run.py
