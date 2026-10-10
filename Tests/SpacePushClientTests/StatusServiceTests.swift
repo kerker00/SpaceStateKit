@@ -59,6 +59,25 @@ struct StatusServiceTests {
         #expect(direct.requested == [Self.mainframe.absoluteString])
     }
 
+    @Test func fallsBackOverHTTPSForHTTPEndpoints() async throws {
+        let endpoint = URL(string: "http://space.example/spaceapi.json")!
+        let push = FakeServer([])
+        let direct = FakeServer([("https://space.example/spaceapi.json", 200, try Fixture.data("mainframe-spaceinfo"))])
+
+        let info = try await Self.service(push: push, direct: direct).space(at: endpoint)
+
+        #expect(info.name == "Mainframe")
+        // SpacePush gets the endpoint as listed; only the direct read is upgraded.
+        #expect(push.requested == ["https://push.example/v1/spaces?endpoint=http%3A%2F%2Fspace.example%2Fspaceapi.json"])
+        #expect(direct.requested == ["https://space.example/spaceapi.json"])
+    }
+
+    @Test func securesOnlyPlainHTTP() {
+        #expect(StatusService.secure(URL(string: "http://a.example:80/x?y=1")!).absoluteString == "https://a.example/x?y=1")
+        #expect(StatusService.secure(URL(string: "HTTP://a.example:8080/x")!).absoluteString == "https://a.example:8080/x")
+        #expect(StatusService.secure(URL(string: "https://a.example/x")!).absoluteString == "https://a.example/x")
+    }
+
     @Test(arguments: [404, 502, 503])
     func fallsBackOnErrorStatus(status: Int) async throws {
         let push = FakeServer([("https://push.example/", status, Data(#"{"error":"x"}"#.utf8))])
