@@ -13,7 +13,8 @@ class Handler(BaseHTTPRequestHandler):
             if self.path == '/redirect':
                 self.send_response(302); self.send_header('Location', '/ok'); self.send_header('Content-Length', '0'); self.end_headers(); return
             if self.path == '/oversize':
-                self.send_response(200); self.send_header('Content-Length', '10000000'); self.end_headers(); self.wfile.write(b'x'*4096); self.wfile.flush(); return
+                self.close_connection = True
+                self.send_response(200); self.send_header('Connection', 'close'); self.send_header('Content-Length', '10000000'); self.end_headers(); self.wfile.write(b'x'*4096); self.wfile.flush(); return
             if self.path == '/chunked':
                 self.send_response(200); self.send_header('Transfer-Encoding', 'chunked'); self.end_headers()
                 for _ in range(100):
