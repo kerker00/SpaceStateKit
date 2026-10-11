@@ -42,6 +42,19 @@ Not modelled yet: sensors, membership plans, webcams, areas, SpaceFED, events an
 
 Decoding is tolerant because many endpoints do not follow the schema exactly. A malformed optional field becomes `nil` or is left out of its array without affecting the rest of the document; only a missing `space` name fails. Every link must be an absolute `http` or `https` URL with a host; other schemes such as `javascript:` or `file:` are dropped. Both icons must pass this check, or the icon pair is dropped.
 
+## Android
+
+`Android/` builds `spacestatekit-android`, an AAR for the [SpaceState Android app](https://github.com/kerker00/SpaceState-Android). A small Swift facade (`SpaceStateKitAndroid`) exposes the three products with types swift-java bridges cleanly; `SpaceStateClient` wraps it for Kotlin with data classes and suspend functions. The AAR contains the generated bindings, swift-java's `SwiftKitCore` runtime (not yet on Maven Central), the Swift runtime for arm64-v8a and x86_64, and R8 rules.
+
+Requirements: the Swift 6.4 SDK for Android (`swift sdk install`, then its `setup-android-sdk.sh`), Android NDK r30 and JDK 17+.
+
+```sh
+cd Android
+./gradlew assembleRelease      # build/outputs/aar/spacestatekit-android-release.aar
+```
+
+The first build compiles swift-syntax for swift-java's code generator and takes several minutes. To run the package tests on an emulator, build with `swift build --swift-sdk swift-6.4.0-RELEASE_android --triple x86_64-unknown-linux-android28 --build-tests` (without `--static-swift-stdlib`), push the test runners, fixture bundles and the SDK's runtime libraries with `adb`, and run each `*-test-runner` with `LD_LIBRARY_PATH=.`.
+
 ## HTTP behavior
 
 The default transport streams through `URLSessionDataDelegate` on both platforms. It rejects oversized declared lengths and cancels as soon as received chunks exceed the limit; it does not first download the full response. Space documents and extra endpoints are limited to 256 KiB; directories to 16 MiB. SpacePush uses the same bounded transport. Injected loaders remain available for consumers and tests; returned bodies are also checked.

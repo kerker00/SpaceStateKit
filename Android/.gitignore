@@ -1,0 +1,6 @@
+.build/
+.swiftpm/
+.gradle/
+build/
+local.properties
+.kotlin/
