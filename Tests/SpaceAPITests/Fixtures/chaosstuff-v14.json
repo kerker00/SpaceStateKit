@@ -1,0 +1,284 @@
+{
+  "api_compatibility": [
+    "14"
+  ],
+  "contact": {
+    "email": "contact@example.org",
+    "ext_secondary_mastodon": "@chaosstuff@social.c3l.lu",
+    "ext_secondary_twitter": "@chaosstuff_",
+    "facebook": "https://www.facebook.com/chaosstuffhackerspace",
+    "issue_mail": "contact@example.org",
+    "keymasters": [
+      {
+        "email": "contact@example.org",
+        "irc_nick": "Keymaster",
+        "mastodon": "Keymaster",
+        "matrix": "Keymaster",
+        "name": "Keymaster"
+      },
+      {
+        "email": "contact@example.org",
+        "mastodon": "Keymaster",
+        "matrix": "Keymaster",
+        "name": "Keymaster"
+      },
+      {
+        "email": "contact@example.org",
+        "mastodon": "Keymaster",
+        "matrix": "Keymaster",
+        "name": "Keymaster",
+        "twitter": "Keymaster",
+        "xmpp": "Keymaster"
+      },
+      {
+        "email": "contact@example.org",
+        "mastodon": "Keymaster",
+        "matrix": "Keymaster",
+        "name": "Keymaster",
+        "twitter": "Keymaster",
+        "xmpp": "Keymaster"
+      },
+      {
+        "email": "contact@example.org",
+        "mastodon": "Keymaster",
+        "name": "Keymaster",
+        "xmpp": "Keymaster"
+      },
+      {
+        "email": "contact@example.org",
+        "name": "Keymaster",
+        "twitter": "Keymaster",
+        "xmpp": "Keymaster"
+      }
+    ],
+    "mastodon": "@c3l@social.c3l.lu",
+    "matrix": "#c3l:matrix.c3l.lu",
+    "ml": "contact@example.org",
+    "mumble": "mumble://mumble.c3l.lu/?version=1.2.0",
+    "phone": "+49 000 0000000",
+    "twitter": "@c3l_",
+    "xmpp": "c3l@conference.c3l.lu"
+  },
+  "ext_ccc": "chaostreff",
+  "feeds": {
+    "calendar": {
+      "type": "ical",
+      "url": "https://cloud.c3l.lu/remote.php/dav/public-calendars/eK7pyq3yFBKDjPzJ/?export"
+    },
+    "wiki": {
+      "type": "atom",
+      "url": "https://wiki.c3l.lu/feed.php"
+    }
+  },
+  "links": [
+    {
+      "description": "Tweets the status of the space and general things about the space!",
+      "name": "ChaosStuff Twitter Bot",
+      "url": "https://twitter.com/chaosstuff_"
+    },
+    {
+      "description": "Toots general things about the space!",
+      "name": "ChaosStuff Mastodon Account",
+      "url": "https://chaos.social/@chaosstuff"
+    },
+    {
+      "description": "Toots the status of the space!",
+      "name": "ChaosStuff Mastodon Bot",
+      "url": "https://chaos.social/@chaosstuffbot"
+    }
+  ],
+  "location": {
+    "address": "60 Victor Hugo Avenue, Luxembourg-Limpertsberg, L-1750, Luxembourg",
+    "lat": 49.620709,
+    "lon": 6.122581,
+    "timezone": "Europe/Luxembourg"
+  },
+  "logo": "http://wiki.c3l.lu/lib/exe/fetch.php?media=organization:logo:logo-chaosstuff-text-grey.png",
+  "membership_plans": [
+    {
+      "billing_interval": "yearly",
+      "currency": "EUR",
+      "description": "For people with a regular income",
+      "name": "Regular Membership",
+      "value": 120
+    },
+    {
+      "billing_interval": "yearly",
+      "currency": "EUR",
+      "description": "For pupils and students",
+      "name": "Student Membership",
+      "value": 40
+    },
+    {
+      "billing_interval": "yearly",
+      "currency": "EUR",
+      "description": "For people who want to use the space to work on projects, but don't want to have voting rights an a general assembly.",
+      "name": "Supporting Membership",
+      "value": 40
+    },
+    {
+      "billing_interval": "yearly",
+      "currency": "EUR",
+      "description": "For people, who cannot afford the membership. Please get in touch with us, before applying.",
+      "name": "Starving Hacker",
+      "value": 1
+    }
+  ],
+  "projects": [
+    "https://wiki.c3l.lu/doku.php?id=projects",
+    "https://projects.c3l.lu"
+  ],
+  "sensors": {
+    "barometer": [
+      {
+        "location": "lab-office_shelf",
+        "unit": "hPa",
+        "value": 973
+      },
+      {
+        "location": "chill-kitchen_shelf",
+        "unit": "hPa",
+        "value": 973
+      },
+      {
+        "location": "attic-rack",
+        "unit": "hPa",
+        "value": 972
+      },
+      {
+        "location": "lab-rack",
+        "unit": "hPa",
+        "value": 973
+      }
+    ],
+    "beverage_supply": [
+      {
+        "name": "Flora Power",
+        "unit": "btl",
+        "value": 260
+      },
+      {
+        "name": "Club Mate Cola",
+        "unit": "btl",
+        "value": 0
+      },
+      {
+        "name": "Rosport Viva",
+        "unit": "btl",
+        "value": 15
+      },
+      {
+        "name": "Rosport Blue",
+        "unit": "btl",
+        "value": 20
+      }
+    ],
+    "humidity": [
+      {
+        "location": "lab-office_shelf",
+        "unit": "%",
+        "value": 30.33
+      },
+      {
+        "location": "chill-kitchen_shelf",
+        "unit": "%",
+        "value": 32.6
+      },
+      {
+        "location": "attic-rack",
+        "unit": "%",
+        "value": 42.56
+      },
+      {
+        "location": "lab-rack",
+        "unit": "%",
+        "value": 22.33
+      }
+    ],
+    "people_now_present": [
+      {
+        "value": 0
+      }
+    ],
+    "power_consumption": [
+      {
+        "location": "lab-soldering",
+        "unit": "W",
+        "value": 0
+      },
+      {
+        "location": "lab-command_and_control",
+        "unit": "W",
+        "value": 0
+      },
+      {
+        "location": "chill-shelf-0",
+        "unit": "W",
+        "value": 0
+      },
+      {
+        "location": "chill-bar",
+        "unit": "W",
+        "value": 0
+      },
+      {
+        "location": "chill-shelf-1",
+        "unit": "W",
+        "value": 0
+      }
+    ],
+    "temperature": [
+      {
+        "location": "chill-shelf",
+        "unit": "°C",
+        "value": 23.1875
+      },
+      {
+        "location": "lab-office_shelf",
+        "unit": "°C",
+        "value": 30.43
+      },
+      {
+        "location": "chill-kitchen_shelf",
+        "unit": "°C",
+        "value": 30.58
+      },
+      {
+        "location": "attic-rack",
+        "unit": "°C",
+        "value": 27.65
+      },
+      {
+        "location": "lab-rack",
+        "unit": "°C",
+        "value": 35.7
+      }
+    ],
+    "total_member_count": [
+      {
+        "name": "Regular members",
+        "value": 17
+      },
+      {
+        "name": "Supporting members",
+        "value": 8
+      }
+    ]
+  },
+  "space": "ChaosStuff",
+  "spacefed": {
+    "spacenet": false,
+    "spacephone": false,
+    "spacesaml": false
+  },
+  "state": {
+    "icon": {
+      "closed": "https://spaceapi.c3l.lu/static/closed.png",
+      "open": "https://spaceapi.c3l.lu/static/open.png"
+    },
+    "lastchange": 1790020254,
+    "open": false,
+    "trigger_person": "Person"
+  },
+  "url": "https://wiki.c3l.lu/doku.php?id=chaosstuff"
+}

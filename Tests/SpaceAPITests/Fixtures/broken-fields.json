@@ -1,0 +1,50 @@
+{
+  "api_compatibility": "15",
+  "space": "Broken Fields Space",
+  "logo": "https://broken.example/logo.png",
+  "url": "https://broken.example/",
+  "location": {
+    "address": "Somewhere 1",
+    "lat": 52.0,
+    "lon": 8.0,
+    "country_code": ["DE"],
+    "hint": 42
+  },
+  "state": {
+    "open": true,
+    "icon": { "open": "javascript:alert(1)", "closed": "https://broken.example/closed.png" }
+  },
+  "contact": {
+    "email": "contact@example.org",
+    "xmpp": 7,
+    "keymasters": [
+      { "name": "Keymaster", "email": "keymaster@example.org" },
+      "not an object",
+      { "irc_nick": ["wrong"], "name": "Second" }
+    ]
+  },
+  "feeds": {
+    "blog": "https://broken.example/blog.xml",
+    "wiki": { "type": "atom", "url": "file:///etc/passwd" },
+    "calendar": { "type": "ical", "url": "https://broken.example/calendar.ics" }
+  },
+  "projects": ["https://broken.example/project", 5, "ftp://broken.example/files"],
+  "links": [
+    { "name": "Good", "url": "https://broken.example/good" },
+    { "name": "No URL" },
+    { "name": "Script", "url": "javascript:alert(1)" }
+  ],
+  "linked_spaces": [
+    { "endpoint": "https://other.example/spaceapi.json", "website": "https://other.example/" },
+    { "website": 3 }
+  ],
+  "sensors": {
+    "temperature": [
+      { "value": 21.5, "unit": "°C", "location": "Lab" },
+      { "value": "warm", "unit": "°C", "location": "Kitchen" },
+      { "unit": "°C", "location": "Attic" }
+    ],
+    "people_now_present": [{ "value": 3, "names": ["Person 1", 2] }],
+    "door_locked": { "value": true, "location": "Front" }
+  }
+}

@@ -15,7 +15,7 @@ The package has no UI dependencies. APNs registration remains an Apple-specific 
 Swift 6.2+, iOS 26+ or macOS 26+ on Apple platforms. CI targets Ubuntu 24.04 x86_64 with Swift 6.2, plus macOS. Linux support is verified by the repository's CI, rather than inferred from conditional imports. ARM64 Linux and static binaries are not yet part of the release acceptance.
 
 ```swift
-.package(url: "https://github.com/kerker00/SpaceStateKit.git", exact: "0.1.0")
+.package(url: "https://github.com/kerker00/SpaceStateKit.git", exact: "0.2.0")
 ```
 
 Import only the products your application needs:
@@ -27,6 +27,20 @@ import SpaceAPI
 let info = try await StatusClient().space(at: URL(string: "https://status.mainframe.io/api/spaceInfo")!)
 print(info.name, info.status.rawValue)
 ```
+
+## What `SpaceInfo` covers
+
+`SpaceInfo` follows SpaceAPI schema v15 and also reads older layouts (flat v0.12 fields, `api`, top-level `icon`, `jabber`):
+
+- name, logo, website, state (open, last change, message, trigger person, open/closed icons)
+- location (address, coordinates, timezone, country code, access hint)
+- contacts, including XMPP, Mumble, SIP, issue mail, Gopher and keymasters
+- feeds (blog, wiki, calendar, Flickr), projects, links and linked spaces
+- `api_compatibility` and the older `api` version
+
+Not modelled yet: sensors, membership plans, webcams, areas, SpaceFED, events and `ext_*` fields.
+
+Decoding is tolerant because many endpoints do not follow the schema exactly. A malformed optional field becomes `nil` or is left out of its array without affecting the rest of the document; only a missing `space` name fails. Every link must be an absolute `http` or `https` URL with a host; other schemes such as `javascript:` or `file:` are dropped. Both icons must pass this check, or the icon pair is dropped.
 
 ## HTTP behavior
 
