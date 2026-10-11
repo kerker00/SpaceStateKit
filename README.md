@@ -15,7 +15,7 @@ The package has no UI dependencies. APNs registration remains an Apple-specific 
 Swift 6.2+, iOS 26+ or macOS 26+ on Apple platforms. CI targets Ubuntu 24.04 x86_64 with Swift 6.2, plus macOS. Linux support is verified by the repository's CI, rather than inferred from conditional imports. ARM64 Linux and static binaries are not yet part of the release acceptance.
 
 ```swift
-.package(url: "https://github.com/kerker00/SpaceStateKit.git", exact: "0.2.0")
+.package(url: "https://github.com/kerker00/SpaceStateKit.git", exact: "0.3.0")
 ```
 
 Import only the products your application needs:
