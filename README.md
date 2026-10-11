@@ -15,7 +15,7 @@ The package has no UI dependencies. APNs registration remains an Apple-specific 
 Swift 6.2+, iOS 26+ or macOS 26+ on Apple platforms. CI targets Ubuntu 24.04 x86_64 with Swift 6.2, plus macOS. Linux support is verified by the repository's CI, rather than inferred from conditional imports. ARM64 Linux and static binaries are not yet part of the release acceptance.
 
 ```swift
-.package(url: "https://github.com/kerker00/SpaceStateKit.git", exact: "0.2.0")
+.package(url: "https://github.com/kerker00/SpaceStateKit.git", exact: "0.3.0")
 ```
 
 Import only the products your application needs:
@@ -41,6 +41,19 @@ print(info.name, info.status.rawValue)
 Not modelled yet: sensors, membership plans, webcams, areas, SpaceFED, events and `ext_*` fields.
 
 Decoding is tolerant because many endpoints do not follow the schema exactly. A malformed optional field becomes `nil` or is left out of its array without affecting the rest of the document; only a missing `space` name fails. Every link must be an absolute `http` or `https` URL with a host; other schemes such as `javascript:` or `file:` are dropped. Both icons must pass this check, or the icon pair is dropped.
+
+## Android
+
+`Android/` builds `spacestatekit-android`, an AAR for the [SpaceState Android app](https://github.com/kerker00/SpaceState-Android). A small Swift facade (`SpaceStateKitAndroid`) exposes the three products with types swift-java bridges cleanly; `SpaceStateClient` wraps it for Kotlin with data classes and suspend functions. The AAR contains the generated bindings, swift-java's `SwiftKitCore` runtime (not yet on Maven Central), the Swift runtime for arm64-v8a and x86_64, and R8 rules.
+
+Requirements: the Swift 6.4 SDK for Android (`swift sdk install`, then its `setup-android-sdk.sh`), Android NDK r30 and JDK 17+.
+
+```sh
+cd Android
+./gradlew assembleRelease      # build/outputs/aar/spacestatekit-android-release.aar
+```
+
+The first build compiles swift-syntax for swift-java's code generator and takes several minutes. To run the package tests on an emulator, build with `swift build --swift-sdk swift-6.4.0-RELEASE_android --triple x86_64-unknown-linux-android28 --build-tests` (without `--static-swift-stdlib`), push the test runners, fixture bundles and the SDK's runtime libraries with `adb`, and run each `*-test-runner` with `LD_LIBRARY_PATH=.`.
 
 ## HTTP behavior
 

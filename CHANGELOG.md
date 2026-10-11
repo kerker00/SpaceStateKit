@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 — 2026-10-11
+
+Additive: the Swift products are unchanged.
+
+- `Android/`: Android library for the SpaceState Android app. The package is cross-compiled with the Swift SDK for Android (arm64-v8a, x86_64) and bridged to Kotlin with swift-java 0.6.0 in JNI mode. It is a separate package, so Apple and Linux consumers never resolve swift-java.
+- Kotlin API `SpaceStateClient` with `space`, `mainframeRooms` and `directory` as suspend functions; push registration follows.
+- Failures reach Kotlin as `SpaceStateException` (unreachable, timeout, HTTP status, response too large, invalid data), since Foundation's error descriptions on Android are raw `NSError` dumps. Kotlin calls have a 30-second deadline as a backstop: right after a network change, a request was seen to hang past the transport's 15 seconds.
+- The package's tests pass on an Android 37 emulator; static linking of the standard library is not supported for `FoundationNetworking` or swift-testing, so the AAR ships the Swift runtime as shared libraries (about 23 MB compressed per ABI).
+
 ## 0.2.0 — 2026-10-11
 
 Additive: existing properties and initialisers keep working.
