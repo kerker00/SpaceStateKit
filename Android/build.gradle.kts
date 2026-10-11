@@ -72,6 +72,8 @@ abstract class JniLibs : DefaultTask() {
     @get:Input abstract val abis: MapProperty<String, String>
     @get:Input abstract val runtime: ListProperty<String>
     @get:Input abstract val sdkRoot: Property<String>
+    /** The Swift builds' products, so a changed library is copied again. */
+    @get:InputFiles @get:PathSensitive(PathSensitivity.RELATIVE) abstract val products: ConfigurableFileCollection
     @get:Internal abstract val packageDir: DirectoryProperty
     @get:Internal abstract val ndkDir: DirectoryProperty
     @get:OutputDirectory abstract val outputDir: DirectoryProperty
@@ -114,6 +116,7 @@ val jniLibs = tasks.register<JniLibs>("swiftJniLibs") {
     abis = androidAbis
     runtime = swiftRuntime
     sdkRoot = swiftSdkRoot
+    products.from(swiftBuilds.map { build -> build.flatMap { it.productsDir }.map { it.asFileTree.matching { include("*.so") } } })
     packageDir = layout.projectDirectory
     ndkDir = androidComponents.sdkComponents.ndkDirectory
     outputDir = layout.buildDirectory.dir("swift/jniLibs")
@@ -121,6 +124,8 @@ val jniLibs = tasks.register<JniLibs>("swiftJniLibs") {
 
 /** The bindings jextract generated during the Swift build, and swift-java's Java runtime. */
 abstract class JavaSources : DefaultTask() {
+    /** The generated bindings and SwiftKitCore, so changed sources are copied again. */
+    @get:InputFiles @get:PathSensitive(PathSensitivity.RELATIVE) abstract val sources: ConfigurableFileCollection
     @get:Internal abstract val packageDir: DirectoryProperty
     @get:OutputDirectory abstract val outputDir: DirectoryProperty
     @get:Inject abstract val fs: FileSystemOperations
@@ -149,6 +154,10 @@ abstract class JavaSources : DefaultTask() {
 
 val javaSources = tasks.register<JavaSources>("swiftJavaSources") {
     dependsOn(swiftBuilds)
+    sources.from(
+        layout.projectDirectory.dir(".build/plugins/outputs/android/SpaceStateKitAndroid/destination/JExtractSwiftPlugin/src/generated/java"),
+        layout.projectDirectory.dir(".build/checkouts/swift-java/SwiftKitCore/src/main/java"),
+    )
     packageDir = layout.projectDirectory
     outputDir = layout.buildDirectory.dir("swift/java")
 }
@@ -164,5 +173,5 @@ group = "net.grafixmafia"
 version = "0.3.0-SNAPSHOT"
 
 dependencies {
-    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 }

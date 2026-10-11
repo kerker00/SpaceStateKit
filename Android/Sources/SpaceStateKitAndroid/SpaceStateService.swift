@@ -27,21 +27,88 @@ public final class SpaceStateService: Sendable {
     }
 
     public func space(endpoint: String) async throws -> Space {
-        guard let url = URL(string: endpoint) else { throw SpaceStateServiceError.invalidEndpoint(endpoint) }
-        return Space(endpoint: endpoint, info: try await service.space(at: url))
+        try await classified {
+            guard let url = URL(string: endpoint) else { throw ServiceError.invalidEndpoint }
+            return Space(endpoint: endpoint, info: try await service.space(at: url))
+        }
     }
 
     public func mainframeRooms() async throws -> [Room] {
-        try await service.mainframeRooms().map(Room.init)
+        try await classified { try await service.mainframeRooms().map(Room.init) }
     }
 
     public func directory() async throws -> [DirectoryItem] {
-        try await service.directory().map(DirectoryItem.init)
+        try await classified { try await service.directory().map(DirectoryItem.init) }
+    }
+
+    private func classified<Value>(_ body: () async throws -> Value) async throws -> Value {
+        do {
+            return try await body()
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            throw ServiceError(error)
+        }
     }
 }
 
-public enum SpaceStateServiceError: Error {
-    case invalidEndpoint(String)
+/// What went wrong, reduced to cases the app explains in its own language.
+///
+/// swift-java hands a thrown error to Java as an exception whose message is
+/// `String(describing:)`, so the description is a stable code the Kotlin layer parses:
+/// `spacestatekit:<kind>[:<detail>]`. Foundation's own descriptions on Android are
+/// raw `NSError` dumps without localization.
+enum ServiceError: Error, CustomStringConvertible {
+    /// No connection, or the host could not be found or reached.
+    case unreachable
+    case timeout
+    case httpStatus(Int)
+    case responseTooLarge
+    /// The answer was not a readable SpaceAPI document, directory or room list.
+    case invalidData
+    case invalidEndpoint
+    case other(String)
+
+    init(_ error: any Error) {
+        switch error {
+        case let error as ServiceError:
+            self = error
+        case StatusClientError.httpStatus(let code), SpacePushError.httpStatus(let code, _):
+            self = .httpStatus(code)
+        case StatusClientError.responseTooLarge:
+            self = .responseTooLarge
+        case is DecodingError:
+            self = .invalidData
+        default:
+            let error = error as NSError
+            guard error.domain == NSURLErrorDomain else {
+                self = .other(String(describing: error))
+                return
+            }
+            switch error.code {
+            case NSURLErrorTimedOut:
+                self = .timeout
+            case NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost, NSURLErrorCannotFindHost,
+                 NSURLErrorCannotConnectToHost, NSURLErrorDNSLookupFailed, NSURLErrorSecureConnectionFailed,
+                 NSURLErrorInternationalRoamingOff, NSURLErrorDataNotAllowed:
+                self = .unreachable
+            default:
+                self = .other("\(error.domain) \(error.code)")
+            }
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .unreachable: "spacestatekit:unreachable"
+        case .timeout: "spacestatekit:timeout"
+        case .httpStatus(let code): "spacestatekit:http:\(code)"
+        case .responseTooLarge: "spacestatekit:tooLarge"
+        case .invalidData: "spacestatekit:invalidData"
+        case .invalidEndpoint: "spacestatekit:invalidEndpoint"
+        case .other(let detail): "spacestatekit:other:\(detail)"
+        }
+    }
 }
 
 public enum Status: Sendable {

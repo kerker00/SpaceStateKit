@@ -3,6 +3,10 @@ package net.grafixmafia.spacestatekit
 import java.time.Instant
 import java.util.Optional
 import java.util.OptionalDouble
+import java.util.concurrent.CompletableFuture
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.future.await
 import net.grafixmafia.spacestatekit.bridge.SpaceStateService
 import org.swift.swiftkit.core.SwiftArena
@@ -54,9 +58,40 @@ data class DirectoryEntry(
     val status: SpaceStatus,
 )
 
+/** Why a read failed, so the app can explain it in its own language. */
+sealed class SpaceStateException(message: String) : Exception(message) {
+    /** No connection, or the host could not be found or reached. */
+    class Unreachable : SpaceStateException("unreachable")
+    class Timeout : SpaceStateException("timeout")
+    class HttpStatus(val code: Int) : SpaceStateException("HTTP $code")
+    class ResponseTooLarge : SpaceStateException("response too large")
+    /** The answer was not a readable SpaceAPI document, directory or room list. */
+    class InvalidData : SpaceStateException("invalid data")
+    class InvalidEndpoint : SpaceStateException("invalid endpoint")
+    class Other(detail: String) : SpaceStateException(detail)
+
+    companion object {
+        /** Reads the code the Swift facade puts into the exception's message. */
+        internal fun from(error: Throwable): SpaceStateException {
+            val code = error.message?.substringAfter("spacestatekit:", missingDelimiterValue = "")
+                ?: return Other(error.toString())
+            return when {
+                code == "unreachable" -> Unreachable()
+                code == "timeout" -> Timeout()
+                code.startsWith("http:") -> code.removePrefix("http:").toIntOrNull()?.let(::HttpStatus) ?: Other(code)
+                code == "tooLarge" -> ResponseTooLarge()
+                code == "invalidData" -> InvalidData()
+                code == "invalidEndpoint" -> InvalidEndpoint()
+                code.startsWith("other:") -> Other(code.removePrefix("other:"))
+                else -> Other(error.toString())
+            }
+        }
+    }
+}
+
 /**
  * SpaceStateKit's `StatusService` for Kotlin: reads through SpacePush and falls back to
- * the spaces directly. Every call runs in Swift; failures surface as exceptions.
+ * the spaces directly. Every call runs in Swift; failures surface as [SpaceStateException].
  *
  * @param spacePushUrl SpacePush's base URL; null reads every space directly.
  * @param userAgent Sent to SpacePush, e.g. `SpaceState/1.0 (Android 16)`.
@@ -69,13 +104,27 @@ class SpaceStateClient(spacePushUrl: String?, userAgent: String, activePeriodsFi
         Optional.ofNullable(spacePushUrl), userAgent, Optional.ofNullable(activePeriodsFile), arena,
     )
 
-    suspend fun space(endpoint: String): SpaceInfo = service.space(endpoint, arena).await().toKotlin()
+    suspend fun space(endpoint: String): SpaceInfo = call { service.space(endpoint, arena) }.toKotlin()
 
-    suspend fun mainframeRooms(): List<MainframeRoom> = service.mainframeRooms(arena).await().map { it.toKotlin() }
+    suspend fun mainframeRooms(): List<MainframeRoom> = call { service.mainframeRooms(arena) }.map { it.toKotlin() }
 
-    suspend fun directory(): List<DirectoryEntry> = service.directory(arena).await().map { it.toKotlin() }
+    suspend fun directory(): List<DirectoryEntry> = call { service.directory(arena) }.map { it.toKotlin() }
+
+    private suspend fun <T> call(start: () -> CompletableFuture<T>): T = try {
+        // SpaceStateKit gives up after 15 seconds. Right after a network change, a request on
+        // Android was seen to hang well past that; the deadline keeps it from blocking the next.
+        withTimeout(CALL_TIMEOUT_MILLIS) { start().await() }
+    } catch (_: TimeoutCancellationException) {
+        throw SpaceStateException.Timeout()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        throw SpaceStateException.from(e)
+    }
 
     companion object {
+        private const val CALL_TIMEOUT_MILLIS = 30_000L
+
         val mainframeEndpoint: String get() = SpaceStateService.getMainframeEndpoint()
 
         fun isMainframe(endpoint: String): Boolean = SpaceStateService.isMainframe(endpoint)
