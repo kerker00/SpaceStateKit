@@ -1,0 +1,336 @@
+{
+  "api_compatibility": [
+    "15"
+  ],
+  "cam": [
+    "https://youtube.com/@railcamhannover"
+  ],
+  "contact": {
+    "email": "contact@example.org",
+    "mastodon": "@leinelab@chaos.social",
+    "ml": "contact@example.org",
+    "mumble": "mumble://leineserver.leinelab.org",
+    "phone": "+49 000 0000000",
+    "sip": "+49 000 0000000"
+  },
+  "feeds": {
+    "calendar": {
+      "type": "ical",
+      "url": "https://leinelab.org/lib/plugins/davcal/ics.php/dokuwiki-56d0397423f22.ics"
+    },
+    "wiki": {
+      "type": "rss",
+      "url": "https://leinelab.org/feed.php"
+    }
+  },
+  "linked_spaces": [
+    {
+      "endpoint": "https://hannover.ccc.de/spaceapi.json",
+      "website": "https://hannover.ccc.de"
+    }
+  ],
+  "links": [
+    {
+      "name": "Arduino Hannover",
+      "url": "https://arduino-hannover.de"
+    },
+    {
+      "name": "Freifunk Hannover",
+      "url": "https://hannover.freifunk.net"
+    }
+  ],
+  "location": {
+    "address": "Hüttenstraße 22B, 30165 Hannover, Germany",
+    "areas": [
+      {
+        "description": "Our regular room for meetings, hacking, soldering, 3D-printing, textile",
+        "name": "Makerspace",
+        "square_meters": 50
+      },
+      {
+        "description": "Woodworkshop with powertools, CNC and Lasers",
+        "name": "Workshop",
+        "square_meters": 100
+      }
+    ],
+    "country_code": "DE",
+    "hint": "If sign is red, space is locked. If shows rainbow but door is closed, press doorbell stickered with a power outlet.",
+    "lat": 52.3929264595891,
+    "lon": 9.723286628723145,
+    "timezone": "Europe/Berlin"
+  },
+  "logo": "https://leinelab.org/logo.png",
+  "membership_plans": [
+    {
+      "billing_interval": "yearly",
+      "currency": "EUR",
+      "description": "Regular membership with access to the makerspace",
+      "name": "Ordentliche Mitgliedschaft",
+      "value": 120
+    },
+    {
+      "billing_interval": "yearly",
+      "currency": "EUR",
+      "description": "Reduced membership fee (student, unemployed, ...) with access to the makerspace",
+      "name": "Ermäßigte Mitgliedschaft",
+      "value": 30
+    },
+    {
+      "billing_interval": "yearly",
+      "currency": "EUR",
+      "description": "Regular membership including access to workshop",
+      "name": "Ordentliche Mitgliedschaft + Werkstatt",
+      "value": 336
+    },
+    {
+      "billing_interval": "yearly",
+      "currency": "EUR",
+      "description": "Reduced membership including access to workshop",
+      "name": "Ermäßigte Mitgliedschaft + Werkstatt",
+      "value": 120
+    }
+  ],
+  "projects": [
+    "https://github.com/LeineLab",
+    "https://git.leinelab.org/LeineLab-Public"
+  ],
+  "sensors": {
+    "barometer": [
+      {
+        "lastchange": 1791735014,
+        "location": "Outdoors",
+        "name": "Outdoor atmospheric pressure",
+        "unit": "hPa",
+        "value": 1002.9
+      },
+      {
+        "lastchange": 1791734517,
+        "location": "Makerspace",
+        "name": "Makerspace atmospheric pressure",
+        "unit": "hPa",
+        "value": 1002.3
+      }
+    ],
+    "beverage_supply": [
+      {
+        "description": "Classic club-mate",
+        "lastchange": 1791670924,
+        "location": "Makerspace",
+        "name": "Club-Mate",
+        "unit": "btl",
+        "value": 20
+      },
+      {
+        "description": "Mate with berries",
+        "lastchange": 1791670924,
+        "location": "Makerspace",
+        "name": "Club-Mate Beere",
+        "unit": "btl",
+        "value": 18
+      },
+      {
+        "description": "Mate with a taste of cinnamon, cardamom and star anise",
+        "lastchange": 1791670924,
+        "location": "Makerspace",
+        "name": "Club-Mate Winter",
+        "unit": "btl",
+        "value": 0
+      },
+      {
+        "description": "Apple spritzer",
+        "lastchange": 1791670924,
+        "location": "Makerspace",
+        "name": "Frucade Apfelschorle",
+        "unit": "btl",
+        "value": 17
+      },
+      {
+        "description": "Isotonic lemonade",
+        "lastchange": 1791670924,
+        "location": "Makerspace",
+        "name": "Frucade Sport",
+        "unit": "btl",
+        "value": 1
+      },
+      {
+        "description": "Black currant spritzer",
+        "lastchange": 1791722186,
+        "location": "Makerspace",
+        "name": "Frucade Schwarze Johannisbeere",
+        "unit": "btl",
+        "value": 10
+      },
+      {
+        "description": "Intense mate taste",
+        "lastchange": 1791670924,
+        "location": "Makerspace",
+        "name": "flora Power",
+        "unit": "btl",
+        "value": 12
+      },
+      {
+        "lastchange": 1791670924,
+        "location": "Makerspace",
+        "name": "Premium Cola",
+        "unit": "btl",
+        "value": 6
+      },
+      {
+        "description": "Sugar-free cola",
+        "lastchange": 1791670924,
+        "location": "Makerspace",
+        "name": "Premium Cola zuckerfrei",
+        "unit": "btl",
+        "value": 21
+      },
+      {
+        "description": "Sparkling water",
+        "lastchange": 1791716366,
+        "location": "Makerspace",
+        "name": "Viva Con Agua laut",
+        "unit": "btl",
+        "value": 16
+      },
+      {
+        "description": "Non-alcoholic beer",
+        "lastchange": 1791670924,
+        "location": "Makerspace",
+        "name": "Gilde Free",
+        "unit": "btl",
+        "value": 30
+      },
+      {
+        "description": "Classic club-mate, but sugar-free",
+        "lastchange": 1791670924,
+        "location": "Makerspace",
+        "name": "Club-Mate Zero",
+        "unit": "btl",
+        "value": 11
+      },
+      {
+        "description": "Cola orange mix",
+        "lastchange": 1791670924,
+        "location": "Makerspace",
+        "name": "Spezi",
+        "unit": "btl",
+        "value": 12
+      },
+      {
+        "description": "Lemonade like drink, but with right spinning lactic acid",
+        "lastchange": 1791670924,
+        "location": "Makerspace",
+        "name": "Chabeso",
+        "unit": "btl",
+        "value": 0
+      }
+    ],
+    "carbondioxide": [
+      {
+        "lastchange": 1791735633,
+        "location": "Makerspace",
+        "name": "Makerspace CO2 value",
+        "unit": "ppm",
+        "value": 538
+      }
+    ],
+    "door_locked": [
+      {
+        "description": "Door facing the indoor spaces, access to other projects",
+        "lastchange": 1791732582,
+        "location": "Makerspace",
+        "name": "Makerspace inner door",
+        "value": true
+      },
+      {
+        "description": "Door below our rainbow sign, accessible from the outside",
+        "lastchange": 1791733390,
+        "location": "Makerspace",
+        "name": "Makerspace outer door",
+        "value": false
+      },
+      {
+        "description": "Access to workshop is restricted, door handle won't open.",
+        "lastchange": 1791732353,
+        "location": "Workshop",
+        "name": "Workshop",
+        "value": false
+      }
+    ],
+    "humidity": [
+      {
+        "lastchange": 1791734517,
+        "location": "Makerspace",
+        "name": "Makerspace humidity",
+        "unit": "%",
+        "value": 53.13
+      },
+      {
+        "lastchange": 1791735549,
+        "location": "Outdoors",
+        "name": "Outdoor humidity",
+        "unit": "%",
+        "value": 77.05
+      },
+      {
+        "lastchange": 1791735285,
+        "location": "Workshop",
+        "name": "Workshop humidity",
+        "unit": "%",
+        "value": 52.52
+      }
+    ],
+    "temperature": [
+      {
+        "description": "Sensor mounted under roof",
+        "lastchange": 1791735549,
+        "location": "Outdoor",
+        "name": "Outdoor Temperature",
+        "unit": "°C",
+        "value": 12.17
+      },
+      {
+        "description": "Mounted in the textile area",
+        "lastchange": 1791734517,
+        "location": "Makerspace",
+        "name": "Makerspace temperature",
+        "unit": "°C",
+        "value": 19.57
+      },
+      {
+        "description": "Mounted next to our distribution panel",
+        "lastchange": 1791735285,
+        "location": "Workshop",
+        "name": "Workshop temperature",
+        "unit": "°C",
+        "value": 18.26
+      },
+      {
+        "description": "Temperature inside out fridge, sensors for individual bottles are not exposed via spaceapi.",
+        "lastchange": 1791735658,
+        "location": "Fridge",
+        "name": "Fridge temperature",
+        "unit": "°C",
+        "value": 13.3125
+      }
+    ],
+    "total_member_count": [
+      {
+        "description": "Members currently in the LeineLab in any membership tier",
+        "lastchange": 1791670882,
+        "location": "LeineLab",
+        "name": "Mitglieder",
+        "value": 124
+      }
+    ]
+  },
+  "space": "LeineLab",
+  "state": {
+    "icon": {
+      "closed": "https://leinelab.org/closed.png",
+      "open": "https://leinelab.org/open.png"
+    },
+    "lastchange": 1791733389,
+    "open": true
+  },
+  "url": "https://leinelab.org"
+}

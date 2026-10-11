@@ -12,15 +12,34 @@ extension KeyedDecodingContainer {
     /// Spaces run their own endpoints; a link such as `javascript:`, `file:` or
     /// another app's URL scheme must never reach a button in the app.
     func webURL(forKey key: Key) -> URL? {
-        guard let url = lossy(URL.self, forKey: key),
-              let scheme = url.scheme?.lowercased(), scheme == "https" || scheme == "http",
-              url.host() != nil
-        else { return nil }
-        return url
+        lossy(URL.self, forKey: key).flatMap { $0.isWebLink ? $0 : nil }
+    }
+
+    /// Returns the array's readable elements; a malformed element is dropped on its own,
+    /// and anything that is not an array gives an empty result.
+    func lossyArray<T: Decodable>(_ type: T.Type, forKey key: Key) -> [T] {
+        (lossy([LossyElement<T>].self, forKey: key) ?? []).compactMap(\.value)
     }
 
     /// Returns a Unix timestamp in seconds as a date, or nil if it is missing or malformed.
     func lossyDate(forKey key: Key) -> Date? {
         lossy(Double.self, forKey: key).map(Date.init(timeIntervalSince1970:))
+    }
+}
+
+private struct LossyElement<T: Decodable>: Decodable {
+    let value: T?
+
+    // Through a single-value container, so JSONDecoder reads URLs from plain strings.
+    init(from decoder: any Decoder) throws {
+        value = try? decoder.singleValueContainer().decode(T.self)
+    }
+}
+
+extension URL {
+    /// An absolute http or https URL with a host.
+    var isWebLink: Bool {
+        guard let scheme = scheme?.lowercased() else { return false }
+        return (scheme == "https" || scheme == "http") && host() != nil
     }
 }
