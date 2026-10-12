@@ -91,7 +91,8 @@ public enum MainframeRoomState: Sendable, Hashable {
         }
     }
 
-    /// Only "open" and "open+" mean guests are welcome; everything else counts as closed.
+    /// Only "open" and "open+" mean guests are welcome. Other known states are closed;
+    /// unrecognised states remain unknown.
     public var status: SpaceStatus {
         switch self {
         case .open, .openPlus: .open

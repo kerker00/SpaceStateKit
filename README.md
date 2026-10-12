@@ -73,6 +73,8 @@ The Python runner starts a temporary local HTTP server and exercises the actual 
 
 ## Maintenance
 
+In the local multi-repository SpaceState workspace, the shared roadmap is `../Plan.md`. It is a workspace file, not part of this public repository.
+
 Changes belong in this repository. Open a branch and pull request, run both CI jobs, and publish a new semantic version tag after successful checks. Consumers use an exact release until they deliberately update it. Changes to public models, limits, behavior and supported platforms are recorded in [CHANGELOG.md](CHANGELOG.md). During the `0.x` series, incompatible public API changes require a new minor version; compatible fixes use a patch version.
 
 The sibling workspace can develop SpaceStateCLI against this checkout with `SPACESTATEKIT_PATH=../SpaceStateKit`. Do not copy sources back into the Apple application.
