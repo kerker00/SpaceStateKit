@@ -7,6 +7,7 @@ import SpacePushClient
 /// cleanly: strings for URLs, seconds since 1970 for dates, plain enums and final classes.
 public final class SpaceStateService: Sendable {
     private let service: StatusService
+    private let invalidConfiguration: Bool
 
     /// - Parameters:
     ///   - spacePushURL: SpacePush's base URL; nil reads every space directly.
@@ -14,21 +15,29 @@ public final class SpaceStateService: Sendable {
     ///   - activePeriodsFile: Where the reported day, week and month labels are kept;
     ///     nil reports none (widgets).
     public init(spacePushURL: String?, userAgent: String, activePeriodsFile: String?) {
+        let baseURL = spacePushURL.flatMap { try? SpaceEndpoint.parse($0) }
+        invalidConfiguration = spacePushURL != nil && baseURL == nil
         let periods = activePeriodsFile.map(ActivePeriods.file(path:))
-        service = StatusService(spacePush: spacePushURL.flatMap(URL.init(string:)).map {
+        service = StatusService(spacePush: baseURL.map {
             SpacePushClient(baseURL: $0, headers: ["User-Agent": userAgent], activePeriods: periods)
         })
+    }
+
+    // Host-side tests exercise the production facade without generating JNI bindings.
+    init(service: StatusService) {
+        self.service = service
+        invalidConfiguration = false
     }
 
     public static let mainframeEndpoint: String = Mainframe.spaceAPIEndpoint.absoluteString
 
     public static func isMainframe(endpoint: String) -> Bool {
-        URL(string: endpoint).map(Mainframe.isMainframe) ?? false
+        (try? SpaceEndpoint.parse(endpoint)).map(Mainframe.isMainframe) ?? false
     }
 
     public func space(endpoint: String) async throws -> Space {
         try await classified {
-            guard let url = URL(string: endpoint) else { throw ServiceError.invalidEndpoint }
+            let url = try SpaceEndpoint.parse(endpoint)
             return Space(endpoint: endpoint, info: try await service.space(at: url))
         }
     }
@@ -43,6 +52,7 @@ public final class SpaceStateService: Sendable {
 
     private func classified<Value>(_ body: () async throws -> Value) async throws -> Value {
         do {
+            guard !invalidConfiguration else { throw ServiceError.invalidEndpoint }
             return try await body()
         } catch is CancellationError {
             throw CancellationError()
@@ -73,6 +83,8 @@ enum ServiceError: Error, CustomStringConvertible {
         switch error {
         case let error as ServiceError:
             self = error
+        case is EndpointValidationError:
+            self = .invalidEndpoint
         case StatusClientError.httpStatus(let code), SpacePushError.httpStatus(let code, _):
             self = .httpStatus(code)
         case StatusClientError.responseTooLarge:

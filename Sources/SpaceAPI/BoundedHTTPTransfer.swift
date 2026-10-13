@@ -106,6 +106,7 @@ final class BoundedHTTPTransfer: NSObject, URLSessionDataDelegate, @unchecked Se
         // Follow HTTP(S) redirects but never downgrade an HTTPS request to plaintext.
         let scheme = request.url?.scheme?.lowercased()
         let downgrade = response.url?.scheme?.lowercased() == "https" && scheme == "http"
-        completionHandler((scheme == "https" || scheme == "http") && !downgrade ? request : nil)
+        let valid = request.url.map { (try? SpaceEndpoint.validate($0)) != nil } ?? false
+        completionHandler(valid && !downgrade ? request : nil)
     }
 }

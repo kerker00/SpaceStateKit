@@ -17,6 +17,25 @@ private final class RequestLog: Sendable {
 }
 
 struct StatusClientTests {
+    @Test func rejectsInvalidEndpointsBeforeCallingInjectedLoader() async throws {
+        let log = RequestLog()
+        let client = StatusClient(load: Self.stub(body: Data(), log: log))
+        for string in ["file:///tmp/status", "https://user:secret@space.example/api", "https://space.example/%0a"] {
+            let url = try #require(URL(string: string))
+            await #expect(throws: EndpointValidationError.invalidEndpoint) { try await client.space(at: url) }
+            await #expect(throws: EndpointValidationError.invalidEndpoint) { try await client.data(from: url) }
+        }
+        #expect(log.all.isEmpty)
+    }
+
+    @Test func limitedTransportRejectsInvalidAndMissingURLs() async throws {
+        let invalid = URLRequest(url: try #require(URL(string: "file:///tmp/status")))
+        await #expect(throws: EndpointValidationError.invalidEndpoint) { try await StatusClient.limitedLoad(invalid) }
+        var missing = URLRequest(url: Self.endpoint)
+        missing.url = nil
+        await #expect(throws: EndpointValidationError.invalidEndpoint) { try await StatusClient.limitedLoad(missing) }
+    }
+
     private static let endpoint = URL(string: "https://status.mainframe.io/api/spaceInfo")!
 
     private static func stub(status: Int = 200, body: Data, log: RequestLog = RequestLog()) -> StatusClient.Loader {

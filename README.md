@@ -57,9 +57,22 @@ The first build compiles swift-syntax for swift-java's code generator and takes 
 
 ## HTTP behavior
 
+`SpaceEndpoint.parse` validates a raw endpoint string and `SpaceEndpoint.validate`
+checks a constructed URL. Endpoints must be absolute HTTP(S) URLs with a nonempty
+host and, when specified, a port from 1 to 65535. Embedded credentials and literal
+or percent-encoded control characters are rejected before loading, including with
+an injected loader. Local hosts remain supported; these checks do not restrict
+access to particular networks. Directory decoding drops invalid endpoint entries
+individually. The Android facade uses the same contract and reports invalid
+endpoints or proxy configuration as `SpaceStateException.InvalidEndpoint`; an
+invalid configured proxy no longer silently selects direct reads.
+
+This endpoint validation is unreleased and is not present in the existing 0.2.0 or
+0.3.0 tags. Consumers need to adopt a release containing these changes.
+
 The default transport streams through `URLSessionDataDelegate` on both platforms. It rejects oversized declared lengths and cancels as soon as received chunks exceed the limit; it does not first download the full response. Space documents and extra endpoints are limited to 256 KiB; directories to 16 MiB. SpacePush uses the same bounded transport. Injected loaders remain available for consumers and tests; returned bodies are also checked.
 
-Requests have a 15-second timeout, including a total resource deadline. Swift task cancellation stops the HTTP task. HTTP(S) redirects are followed with URLSession's redirect limit; HTTPS-to-HTTP downgrades are refused. Directory names use numeric, case-insensitive comparison in a fixed `en_US_POSIX` locale, with endpoint ordering as a tie breaker.
+Requests have a 15-second timeout, including a total resource deadline. Swift task cancellation stops the HTTP task. HTTP(S) redirects are followed with URLSession's redirect limit; invalid endpoint redirects and HTTPS-to-HTTP downgrades are refused. Directory names use numeric, case-insensitive comparison in a fixed `en_US_POSIX` locale, with endpoint ordering as a tie breaker.
 
 ## Development and verification
 

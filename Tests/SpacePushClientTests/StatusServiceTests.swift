@@ -30,6 +30,18 @@ private final class FakeServer: Sendable {
 }
 
 struct StatusServiceTests {
+    @Test func invalidEndpointNeverReachesProxyOrFallback() async throws {
+        let push = FakeServer([])
+        let direct = FakeServer([])
+        let service = Self.service(push: push, direct: direct)
+        for string in ["file:///tmp/status", "https://user:secret@space.example/api", "https://space.example/%0a"] {
+            let url = try #require(URL(string: string))
+            await #expect(throws: EndpointValidationError.invalidEndpoint) { try await service.space(at: url) }
+        }
+        #expect(push.requested.isEmpty)
+        #expect(direct.requested.isEmpty)
+    }
+
     private static let pushURL = URL(string: "https://push.example")!
     private static let mainframe = URL(string: "https://status.mainframe.io/api/spaceInfo")!
 

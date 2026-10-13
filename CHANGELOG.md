@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Add `SpaceEndpoint.parse`, `SpaceEndpoint.validate` and `EndpointValidationError`.
+  Require absolute HTTP(S) endpoints with a host, valid port, no embedded credentials
+  and no literal or percent-encoded control characters at direct-read, SpacePush-read
+  and registration boundaries. Initializer signatures and URL identities are preserved.
+- Skip invalid directory endpoint entries individually; use the same validation for
+  redirects while retaining HTTPS downgrade protection.
+- Android facade: validate raw endpoint strings and configured proxy URLs. Invalid
+  configuration fails with the existing `invalidEndpoint` code instead of selecting
+  direct reads silently. Host tests compile the production Swift facade without JNI.
+
 ## 0.3.0 — 2026-10-11
 
 Additive: the Swift products are unchanged.

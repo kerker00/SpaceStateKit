@@ -16,6 +16,14 @@ let package = Package(
         .target(name: "SpaceAPI"),
         .target(name: "MainframeStatus", dependencies: ["SpaceAPI"]),
         .target(name: "SpacePushClient", dependencies: ["SpaceAPI", "MainframeStatus"]),
+        // Compile the same Android facade for host tests, without swift-java or JNI.
+        .target(
+            name: "SpaceStateAndroidFacade",
+            dependencies: ["SpaceAPI", "MainframeStatus", "SpacePushClient"],
+            path: "Android/Sources/SpaceStateKitAndroid",
+            exclude: ["swift-java.config"]
+        ),
+        .testTarget(name: "AndroidFacadeTests", dependencies: ["SpaceStateAndroidFacade", "SpaceAPI", "SpacePushClient"]),
         .testTarget(
             name: "SpaceAPITests",
             dependencies: ["SpaceAPI"],

@@ -61,6 +61,8 @@ public struct SpacePushClient: Sendable {
     public func register(
         deviceToken: Data, environment: PushEnvironment, subscriptions: [PushSubscription], platform: String? = nil
     ) async throws {
+        try SpaceEndpoint.validate(baseURL)
+        for subscription in subscriptions { try SpaceEndpoint.validate(subscription.endpoint) }
         var request = request(for: deviceToken, method: "PUT")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let encoder = JSONEncoder()
@@ -73,6 +75,7 @@ public struct SpacePushClient: Sendable {
 
     /// Removes the device, so it gets no more notifications.
     public func unregister(deviceToken: Data) async throws {
+        try SpaceEndpoint.validate(baseURL)
         try await send(request(for: deviceToken, method: "DELETE"))
     }
 
@@ -83,6 +86,7 @@ public struct SpacePushClient: Sendable {
 
     /// A space's SpaceAPI document as SpacePush last fetched it, at most a minute old.
     public func space(at endpoint: URL) async throws -> SpaceInfo {
+        try SpaceEndpoint.validate(endpoint)
         let data = try await get(path: ["v1", "spaces"], query: ["endpoint": endpoint.absoluteString])
         return try JSONDecoder().decode(SpaceInfo.self, from: data)
     }
@@ -107,6 +111,7 @@ public struct SpacePushClient: Sendable {
     }
 
     private func get(path: [String], query: [String: String] = [:], maximumBytes: Int = StatusClient.maxResponseBytes) async throws -> Data {
+        try SpaceEndpoint.validate(baseURL)
         var url = baseURL
         for component in path {
             url.append(component: component)
@@ -134,6 +139,8 @@ public struct SpacePushClient: Sendable {
 
     @discardableResult
     private func send(_ request: URLRequest, maximumBytes: Int = StatusClient.maxResponseBytes) async throws -> Data {
+        guard let url = request.url else { throw EndpointValidationError.invalidEndpoint }
+        try SpaceEndpoint.validate(url)
         var request = request
         for (field, value) in headers {
             request.setValue(value, forHTTPHeaderField: field)
