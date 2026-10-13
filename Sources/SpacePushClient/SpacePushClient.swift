@@ -42,6 +42,7 @@ public struct SpacePushClient: Sendable {
     /// Reports the first request of each day, week and month in `X-SpaceState-First`; nil sends nothing.
     public let activePeriods: ActivePeriods?
     private let load: Loader?
+    private let now: @Sendable () -> Date
 
     /// - Parameter load: Performs the request. Tests pass a stub; the default uses a bounded URL session.
     public init(
@@ -50,10 +51,22 @@ public struct SpacePushClient: Sendable {
         activePeriods: ActivePeriods? = nil,
         load: Loader? = nil
     ) {
+        self.init(baseURL: baseURL, headers: headers, activePeriods: activePeriods, now: { Date() }, load: load)
+    }
+
+    /// Injectable receipt clock; the existing loader initializer is preserved.
+    public init(
+        baseURL: URL,
+        headers: [String: String] = [:],
+        activePeriods: ActivePeriods? = nil,
+        now: @escaping @Sendable () -> Date,
+        load: Loader? = nil
+    ) {
         self.baseURL = baseURL
         self.headers = headers
         self.activePeriods = activePeriods
         self.load = load
+        self.now = now
     }
 
     /// Registers the device, replacing any earlier registration of the same token.
@@ -84,7 +97,8 @@ public struct SpacePushClient: Sendable {
         try SpaceDirectory.decode(await get(path: ["v1", "directory"], maximumBytes: StatusClient.maxDirectoryResponseBytes))
     }
 
-    /// A space's SpaceAPI document as SpacePush last fetched it, at most a minute old.
+    /// A space's SpaceAPI document as SpacePush last fetched it. This legacy API
+    /// omits observation evidence; use spaceObservation(at:) for freshness.
     public func space(at endpoint: URL) async throws -> SpaceInfo {
         try SpaceEndpoint.validate(endpoint)
         let data = try await get(path: ["v1", "spaces"], query: ["endpoint": endpoint.absoluteString])
@@ -93,6 +107,31 @@ public struct SpacePushClient: Sendable {
 
     public func mainframeRooms() async throws -> [MainframeRoom] {
         try Mainframe.decodeRooms(await get(path: ["v1", "mainframe", "rooms"]))
+    }
+
+    /// Retains proxy fetch time instead of stamping a cached response as new.
+    /// Missing or invalid headers provide unknown timing, preserving the value.
+    public func spaceObservation(at endpoint: URL) async throws -> StatusObservation<SpaceInfo> {
+        try SpaceEndpoint.validate(endpoint)
+        let answer = try await getResponse(path: ["v1", "spaces"], query: ["endpoint": endpoint.absoluteString])
+        return StatusObservation(value: try JSONDecoder().decode(SpaceInfo.self, from: answer.data),
+                                 timing: observationTiming(answer))
+    }
+
+    public func mainframeRoomsObservation() async throws -> StatusObservation<[MainframeRoom]> {
+        let answer = try await getResponse(path: ["v1", "mainframe", "rooms"])
+        return StatusObservation(value: try Mainframe.decodeRooms(answer.data), timing: observationTiming(answer))
+    }
+
+    /// Per-entry lastSeen is the evidence, not the time the list was downloaded.
+    public func directoryObservations() async throws -> [StatusObservation<DirectoryEntry>] {
+        let answer = try await getResponse(path: ["v1", "directory"], maximumBytes: StatusClient.maxDirectoryResponseBytes)
+        let maximumAge = observationAge(answer.response)
+        return try SpaceDirectory.decode(answer.data).map { entry in
+            StatusObservation(value: entry, timing: ObservationTiming(source: .spacePush,
+                observedAt: entry.lastSeen, receivedAt: answer.receivedAt, maximumAge: maximumAge,
+                sourceReachable: entry.reachable))
+        }
     }
 
     /// APNs device tokens travel as lowercase hex.
@@ -111,6 +150,10 @@ public struct SpacePushClient: Sendable {
     }
 
     private func get(path: [String], query: [String: String] = [:], maximumBytes: Int = StatusClient.maxResponseBytes) async throws -> Data {
+        try await getResponse(path: path, query: query, maximumBytes: maximumBytes).data
+    }
+
+    private func getResponse(path: [String], query: [String: String] = [:], maximumBytes: Int = StatusClient.maxResponseBytes) async throws -> ReadResponse {
         try SpaceEndpoint.validate(baseURL)
         var url = baseURL
         for component in path {
@@ -127,7 +170,7 @@ public struct SpacePushClient: Sendable {
         }
         var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        return try await send(request, maximumBytes: maximumBytes)
+        return try await sendResponse(request, maximumBytes: maximumBytes)
     }
 
     private func request(for deviceToken: Data, method: String) -> URLRequest {
@@ -139,6 +182,16 @@ public struct SpacePushClient: Sendable {
 
     @discardableResult
     private func send(_ request: URLRequest, maximumBytes: Int = StatusClient.maxResponseBytes) async throws -> Data {
+        try await sendResponse(request, maximumBytes: maximumBytes).data
+    }
+
+    private struct ReadResponse {
+        let data: Data
+        let response: URLResponse
+        let receivedAt: Date
+    }
+
+    private func sendResponse(_ request: URLRequest, maximumBytes: Int = StatusClient.maxResponseBytes) async throws -> ReadResponse {
         guard let url = request.url else { throw EndpointValidationError.invalidEndpoint }
         try SpaceEndpoint.validate(url)
         var request = request
@@ -168,6 +221,32 @@ public struct SpacePushClient: Sendable {
             let reason = try? JSONDecoder().decode(ErrorBody.self, from: data).error
             throw SpacePushError.httpStatus(http.statusCode, reason: reason)
         }
-        return data
+        return ReadResponse(data: data, response: response, receivedAt: now())
+    }
+
+    private func observationAge(_ response: URLResponse) -> TimeInterval {
+        guard let field = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "X-SpacePush-Max-Data-Age")
+        else { return ObservationTiming.defaultMaximumAge }
+        // A present malformed policy must not quietly become the default policy.
+        return Self.seconds(field).flatMap { $0 > 0 ? $0 : nil } ?? 0
+    }
+
+    private func observationTiming(_ answer: ReadResponse) -> ObservationTiming {
+        let http = answer.response as? HTTPURLResponse
+        let fetched = http?.value(forHTTPHeaderField: "X-SpacePush-Fetched-At").flatMap(Self.seconds)
+        let expiryField = http?.value(forHTTPHeaderField: "X-SpacePush-Expires-At")
+        let expiry = expiryField.flatMap(Self.seconds)
+        let validExpiry = expiryField == nil || expiry != nil
+        return ObservationTiming(source: .spacePush,
+            observedAt: validExpiry ? fetched.map(Date.init(timeIntervalSince1970:)) : nil,
+            receivedAt: answer.receivedAt, maximumAge: observationAge(answer.response),
+            advertisedExpiresAt: expiry.map(Date.init(timeIntervalSince1970:)))
+    }
+
+    private static func seconds(_ field: String) -> TimeInterval? {
+        let text = field.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty, text.utf8.allSatisfy({ (48...57).contains($0) }),
+              let value = Int64(text) else { return nil }
+        return TimeInterval(value)
     }
 }

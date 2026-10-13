@@ -103,6 +103,13 @@ public enum MainframeRoomState: Sendable, Hashable {
 }
 
 extension StatusClient {
+    /// Room timestamps describe state changes. The successful document receipt
+    /// supplies their common observation time for direct reads.
+    public func mainframeRoomsObservation() async throws -> StatusObservation<[MainframeRoom]> {
+        let document = try await dataObservation(from: Mainframe.openStateURL)
+        return StatusObservation(value: try Mainframe.decodeRooms(document.value), timing: document.timing)
+    }
+
     public func mainframeRooms() async throws -> [MainframeRoom] {
         try Mainframe.decodeRooms(await data(from: Mainframe.openStateURL))
     }
