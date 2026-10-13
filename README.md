@@ -74,6 +74,54 @@ The default transport streams through `URLSessionDataDelegate` on both platforms
 
 Requests have a 15-second timeout, including a total resource deadline. Swift task cancellation stops the HTTP task. HTTP(S) redirects are followed with URLSession's redirect limit; invalid endpoint redirects and HTTPS-to-HTTP downgrades are refused. Directory names use numeric, case-insensitive comparison in a fixed `en_US_POSIX` locale, with endpoint ordering as a tie breaker.
 
+## Observation age (unreleased)
+
+The working source adds `spaceObservation(at:)`, `mainframeRoomsObservation()`
+and `directoryObservations()` to the appropriate clients and `StatusService`.
+They return `StatusObservation<Value>` with `ObservationTiming`. These APIs are
+not in the 0.3.1 tag; consumers keep their released pins until a new release is
+approved and published.
+
+```swift
+let observation = try await StatusClient().spaceObservation(at: endpoint)
+let status = observation.timing.currentStatus(observation.value.status)
+```
+
+Keep the value for a labelled last known view, but evaluate `freshness(at:)` or
+`currentStatus(_:at:)` again whenever displaying it. A retained successful read
+expires without another request; stale or unknown timing cannot provide a current
+open/closed state. Unknown reported states remain unknown even with current timing.
+The caller tracks its own last attempt and errors separately; failures return no
+successful observation.
+
+- `observedAt` is the proxy's last successful endpoint fetch, an entry's original
+  directory `lastSeen`, or the successful receipt time for a direct endpoint read.
+- `receivedAt` is the client's successful receipt. Fetching a cached proxy answer
+  or a directory list does not replace older or missing observation times.
+- `source` identifies the read path (`direct`, `aggregator`, `spacePush`), not a
+  physical measurement source. SpaceAPI `state.lastchange` and room `since` remain
+  state-change times, independent of observation age.
+- `expiresAt` is the observation plus its age limit, shortened by an advertised
+  proxy expiry when present. Expiry is exclusive. Missing, nonfinite, invalid or
+  future-at-receipt timing, explicit failed directory reachability, and a backwards
+  client clock provide unknown freshness. The value and original times remain
+  available. Broken optional directory validation fields do not discard entries.
+
+Proxy reads preserve `X-SpacePush-Fetched-At`, `X-SpacePush-Max-Data-Age` and
+`X-SpacePush-Expires-At`. Older servers with only the original fetch header use a
+conservative 900-second default. A missing fetch header or a malformed present
+policy/expiry never becomes a newly observed current value. `StatusService` tries
+its direct HTTPS fallback for a stale or unproven proxy space/room observation;
+cancellation does not start a fallback. Per-entry unknown directory states stay
+listed and do not force the whole directory onto the fallback path.
+
+Direct reads use a 900-second default retention limit, with clock and policy
+injection available through the new initializer. Successful HTTP receipt proves
+a usable answer was received, not that the upstream physically measured its state
+at that moment. Existing value-only APIs and loader initializers remain available;
+they do not themselves expire locally retained data. Apps, CLI, widgets, website
+and the Android/Kotlin bridge still need to adopt the new observation contract.
+
 ## Development and verification
 
 ```sh

@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- Add `StatusObservation`, `ObservationTiming`, `ObservationSource` and
+  `ObservationFreshness`, separating source observation, client receipt and expiry
+  from state-change times. Retained stale or unproven values have unknown current
+  status; explicit directory reachability failures preserve data without a current
+  opening. `DirectoryEntry.reachable` is optional and defaults to nil.
+- Add observation reads for spaces, directories and Mainframe rooms. Preserve
+  SpacePush headers and per-entry lastSeen, with a 900-second default policy for
+  direct reads and older proxy responses. `StatusService` falls back over HTTPS
+  for stale or unproven proxy space/room observations, preserving cancellation.
+- Keep the existing value-only APIs and loader initializer signatures. Add clock
+  injection for deterministic observation tests. Consumer adoption and a new
+  source release are separate steps; the 0.3.1 tag is unchanged.
+
 ## 0.3.1 — 2026-10-13
 
 - Add `SpaceEndpoint.parse`, `SpaceEndpoint.validate` and `EndpointValidationError`.

@@ -14,6 +14,8 @@ public struct StatusClient: Sendable {
     public typealias Loader = @Sendable (URLRequest) async throws -> (Data, URLResponse)
 
     private let load: Loader?
+    private let now: @Sendable () -> Date
+    private let maximumObservationAge: TimeInterval
 
     /// Larger responses are aborted: endpoints are run by third parties, and a
     /// hostile one must not be able to exhaust the app's memory.
@@ -22,7 +24,16 @@ public struct StatusClient: Sendable {
     /// - Parameter load: Performs the request. Tests pass a stub; the default uses a bounded URL session
     ///   with separate limits for space documents and the directory.
     public init(load: Loader? = nil) {
+        self.init(now: { Date() }, load: load)
+    }
+
+    /// Injectable clock and direct-read policy, without changing the legacy
+    /// loader initializer or its trailing-closure syntax.
+    public init(maximumObservationAge: TimeInterval = ObservationTiming.defaultMaximumAge,
+                now: @escaping @Sendable () -> Date, load: Loader? = nil) {
         self.load = load
+        self.now = now
+        self.maximumObservationAge = maximumObservationAge
     }
 
     @Sendable
@@ -47,6 +58,33 @@ public struct StatusClient: Sendable {
     /// Fetches every listed space from the aggregator.
     public func directory() async throws -> [DirectoryEntry] {
         try SpaceDirectory.decode(await data(from: SpaceDirectory.aggregatorURL, maximumBytes: Self.maxDirectoryResponseBytes))
+    }
+
+    /// A direct successful fetch provides a receipt observation, not a physical
+    /// measurement timestamp. `state.lastchange` does not determine its age.
+    public func spaceObservation(at endpoint: URL) async throws -> StatusObservation<SpaceInfo> {
+        let observation = try await dataObservation(from: endpoint)
+        return StatusObservation(value: try JSONDecoder().decode(SpaceInfo.self, from: observation.value),
+                                 timing: observation.timing)
+    }
+
+    /// Each entry retains its own original lastSeen. Missing observations are
+    /// unknown, even though the directory document was just received successfully.
+    public func directoryObservations() async throws -> [StatusObservation<DirectoryEntry>] {
+        let document = try await dataObservation(from: SpaceDirectory.aggregatorURL,
+                                                 maximumBytes: Self.maxDirectoryResponseBytes)
+        return try SpaceDirectory.decode(document.value).map { entry in
+            StatusObservation(value: entry, timing: ObservationTiming(source: .aggregator,
+                observedAt: entry.lastSeen, receivedAt: document.timing.receivedAt,
+                maximumAge: maximumObservationAge, sourceReachable: entry.reachable))
+        }
+    }
+
+    public func dataObservation(from url: URL, maximumBytes: Int = Self.maxResponseBytes) async throws -> StatusObservation<Data> {
+        let data = try await data(from: url, maximumBytes: maximumBytes)
+        let receivedAt = now()
+        return StatusObservation(value: data, timing: ObservationTiming(source: .direct,
+            observedAt: receivedAt, receivedAt: receivedAt, maximumAge: maximumObservationAge))
     }
 
     /// Fetches raw data, for endpoints beyond SpaceAPI. Throws on non-2xx responses.
