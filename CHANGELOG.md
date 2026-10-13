@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.1 — 2026-10-13
 
 - Add `SpaceEndpoint.parse`, `SpaceEndpoint.validate` and `EndpointValidationError`.
   Require absolute HTTP(S) endpoints with a host, valid port, no embedded credentials

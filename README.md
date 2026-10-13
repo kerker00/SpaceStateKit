@@ -15,7 +15,7 @@ The package has no UI dependencies. APNs registration remains an Apple-specific 
 Swift 6.2+, iOS 26+ or macOS 26+ on Apple platforms. CI targets Ubuntu 24.04 x86_64 with Swift 6.2, plus macOS. Linux support is verified by the repository's CI, rather than inferred from conditional imports. ARM64 Linux and static binaries are not yet part of the release acceptance.
 
 ```swift
-.package(url: "https://github.com/kerker00/SpaceStateKit.git", exact: "0.3.0")
+.package(url: "https://github.com/kerker00/SpaceStateKit.git", exact: "0.3.1")
 ```
 
 Import only the products your application needs:
@@ -67,8 +67,8 @@ individually. The Android facade uses the same contract and reports invalid
 endpoints or proxy configuration as `SpaceStateException.InvalidEndpoint`; an
 invalid configured proxy no longer silently selects direct reads.
 
-This endpoint validation is unreleased and is not present in the existing 0.2.0 or
-0.3.0 tags. Consumers need to adopt a release containing these changes.
+Endpoint validation is available starting with 0.3.1 and is not present in the
+0.2.0 or 0.3.0 tags. Consumers need to adopt 0.3.1 or a later release.
 
 The default transport streams through `URLSessionDataDelegate` on both platforms. It rejects oversized declared lengths and cancels as soon as received chunks exceed the limit; it does not first download the full response. Space documents and extra endpoints are limited to 256 KiB; directories to 16 MiB. SpacePush uses the same bounded transport. Injected loaders remain available for consumers and tests; returned bodies are also checked.
 
