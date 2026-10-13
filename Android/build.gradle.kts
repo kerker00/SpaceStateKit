@@ -170,7 +170,7 @@ androidComponents {
 }
 
 group = "net.grafixmafia"
-version = "0.3.1"
+version = "0.3.2"
 
 dependencies {
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")

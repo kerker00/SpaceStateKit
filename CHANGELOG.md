@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.2 — 2026-10-13
 
 - Add `StatusObservation`, `ObservationTiming`, `ObservationSource` and
   `ObservationFreshness`, separating source observation, client receipt and expiry
@@ -12,8 +12,8 @@
   direct reads and older proxy responses. `StatusService` falls back over HTTPS
   for stale or unproven proxy space/room observations, preserving cancellation.
 - Keep the existing value-only APIs and loader initializer signatures. Add clock
-  injection for deterministic observation tests. Consumer adoption and a new
-  source release are separate steps; the 0.3.1 tag is unchanged.
+  injection for deterministic observation tests. Consumer adoption remains a
+  separate step; previous tags are unchanged.
 
 ## 0.3.1 — 2026-10-13
 
