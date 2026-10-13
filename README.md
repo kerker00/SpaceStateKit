@@ -15,7 +15,7 @@ The package has no UI dependencies. APNs registration remains an Apple-specific 
 Swift 6.2+, iOS 26+ or macOS 26+ on Apple platforms. CI targets Ubuntu 24.04 x86_64 with Swift 6.2, plus macOS. Linux support is verified by the repository's CI, rather than inferred from conditional imports. ARM64 Linux and static binaries are not yet part of the release acceptance.
 
 ```swift
-.package(url: "https://github.com/kerker00/SpaceStateKit.git", exact: "0.3.1")
+.package(url: "https://github.com/kerker00/SpaceStateKit.git", exact: "0.3.2")
 ```
 
 Import only the products your application needs:
@@ -74,13 +74,13 @@ The default transport streams through `URLSessionDataDelegate` on both platforms
 
 Requests have a 15-second timeout, including a total resource deadline. Swift task cancellation stops the HTTP task. HTTP(S) redirects are followed with URLSession's redirect limit; invalid endpoint redirects and HTTPS-to-HTTP downgrades are refused. Directory names use numeric, case-insensitive comparison in a fixed `en_US_POSIX` locale, with endpoint ordering as a tie breaker.
 
-## Observation age (unreleased)
+## Observation age (0.3.2)
 
-The working source adds `spaceObservation(at:)`, `mainframeRoomsObservation()`
+Version 0.3.2 adds `spaceObservation(at:)`, `mainframeRoomsObservation()`
 and `directoryObservations()` to the appropriate clients and `StatusService`.
 They return `StatusObservation<Value>` with `ObservationTiming`. These APIs are
-not in the 0.3.1 tag; consumers keep their released pins until a new release is
-approved and published.
+available starting with 0.3.2 and are not in earlier tags. Consumers must
+deliberately adopt the published source release to receive the new APIs.
 
 ```swift
 let observation = try await StatusClient().spaceObservation(at: endpoint)
