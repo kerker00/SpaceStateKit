@@ -49,7 +49,7 @@ public enum SpaceDirectory {
 
         init(from decoder: any Decoder) throws {
             let container = try? decoder.container(keyedBy: CodingKeys.self)
-            url = container?.lossy(URL.self, forKey: .url)
+            url = container?.lossy(String.self, forKey: .url).flatMap { try? SpaceEndpoint.parse($0) }
             lastSeen = container?.lossyDate(forKey: .lastSeen)
             data = container?.lossy(SpaceInfo.self, forKey: .data)
         }

@@ -20,7 +20,8 @@ public struct StatusService: Sendable {
     }
 
     public func space(at endpoint: URL) async throws -> SpaceInfo {
-        try await read(spacePush.map { client in { try await client.space(at: endpoint) } }) {
+        try SpaceEndpoint.validate(endpoint)
+        return try await read(spacePush.map { client in { try await client.space(at: endpoint) } }) {
             try await direct.space(at: Self.secure(endpoint))
         }
     }

@@ -4,6 +4,7 @@ import FoundationNetworking
 #endif
 import Synchronization
 import Testing
+import SpaceAPI
 @testable import SpacePushClient
 
 private final class RequestLog: Sendable {
@@ -17,6 +18,33 @@ private final class RequestLog: Sendable {
 }
 
 struct SpacePushClientTests {
+    @Test func rejectsInvalidSubscriptionsBeforeSendingRegistration() async throws {
+        let log = RequestLog()
+        let client = Self.client(log: log)
+        let invalid = try #require(URL(string: "https://user:secret@space.example/api"))
+        await #expect(throws: EndpointValidationError.invalidEndpoint) {
+            try await client.register(deviceToken: Data([1]), environment: .sandbox,
+                                      subscriptions: [PushSubscription(endpoint: Self.mainframe), PushSubscription(endpoint: invalid)])
+        }
+        await #expect(throws: EndpointValidationError.invalidEndpoint) { try await client.space(at: invalid) }
+        #expect(log.all.isEmpty)
+    }
+
+    @Test func rejectsInvalidBaseBeforeReadOrWrite() async throws {
+        let log = RequestLog()
+        let client = SpacePushClient(baseURL: try #require(URL(string: "https://user:secret@push.example"))) { request in
+            log.append(request)
+            throw URLError(.cannotConnectToHost)
+        }
+        await #expect(throws: EndpointValidationError.invalidEndpoint) { try await client.directory() }
+        await #expect(throws: EndpointValidationError.invalidEndpoint) { try await client.mainframeRooms() }
+        await #expect(throws: EndpointValidationError.invalidEndpoint) { try await client.unregister(deviceToken: Data([1])) }
+        await #expect(throws: EndpointValidationError.invalidEndpoint) {
+            try await client.register(deviceToken: Data([1]), environment: .sandbox, subscriptions: [])
+        }
+        #expect(log.all.isEmpty)
+    }
+
     private static let baseURL = URL(string: "http://127.0.0.1:8080")!
     private static let token = Data([0x00, 0xab, 0x10, 0xff])
     private static let mainframe = URL(string: "https://status.mainframe.io/api/spaceInfo")!

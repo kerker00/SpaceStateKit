@@ -3,6 +3,15 @@ import Testing
 @testable import SpaceAPI
 
 struct SpaceDirectoryTests {
+    @Test func skipsInvalidEndpointEntriesIndividually() throws {
+        let urls = ["https://space.example/api", "http://localhost/status", "file:///tmp/status",
+                    "https://user:secret@space.example/api", "https://space.example/api\n",
+                    "https://space.example/%0A", "api/status", "https://space.example:65536/api"]
+        let json = try JSONSerialization.data(withJSONObject: urls.map { ["url": $0, "data": ["space": $0]] })
+        let entries = try SpaceDirectory.decode(json)
+        #expect(Set(entries.map(\.endpoint.absoluteString)) == Set(urls.prefix(2)))
+    }
+
     @Test func decodesAggregatorAndSkipsEntriesWithoutData() throws {
         let entries = try SpaceDirectory.decode(Fixture.data("aggregator"))
 

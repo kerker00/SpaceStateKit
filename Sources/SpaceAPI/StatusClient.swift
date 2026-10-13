@@ -34,7 +34,9 @@ public struct StatusClient: Sendable {
 
     /// Reads incrementally and cancels the HTTP task before accumulating an oversized body.
     public static func limitedLoad(_ request: URLRequest, maximumBytes: Int) async throws -> (Data, URLResponse) {
-        try await BoundedHTTPTransfer(maximumBytes: maximumBytes).load(request)
+        guard let url = request.url else { throw EndpointValidationError.invalidEndpoint }
+        try SpaceEndpoint.validate(url)
+        return try await BoundedHTTPTransfer(maximumBytes: maximumBytes).load(request)
     }
 
     /// Fetches a space directly from its own endpoint.
@@ -49,6 +51,7 @@ public struct StatusClient: Sendable {
 
     /// Fetches raw data, for endpoints beyond SpaceAPI. Throws on non-2xx responses.
     public func data(from url: URL, maximumBytes: Int = Self.maxResponseBytes) async throws -> Data {
+        try SpaceEndpoint.validate(url)
         var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         let (data, response): (Data, URLResponse)
