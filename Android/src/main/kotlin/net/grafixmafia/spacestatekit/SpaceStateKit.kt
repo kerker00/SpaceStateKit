@@ -172,7 +172,7 @@ class SpaceStateClient(spacePushUrl: String?, userAgent: String, activePeriodsFi
                 person.getContacts(arena).map { DetailContact(it.kind, it.value) })
         },
         feeds = getFeeds(arena).map { DetailFeed(it.kind, it.url, it.format.orElse(null)) },
-        projects = getProjects(arena).toList(),
+        projects = getProjects().toList(),
         links = getLinks(arena).map { DetailLink(it.name, it.url, it.summary.orElse(null)) },
         linkedSpaces = getLinkedSpaces(arena).map { DetailLinkedSpace(it.apiEndpoint.orElse(null), it.website.orElse(null)) },
     )
