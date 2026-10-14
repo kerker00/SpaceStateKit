@@ -1,6 +1,8 @@
 package net.grafixmafia.spacestatekit
 
 import java.time.Instant
+import kotlin.math.floor
+import net.grafixmafia.spacestatekit.bridge.ReadTiming as BridgeReadTiming
 import java.util.Optional
 import java.util.OptionalDouble
 import java.util.concurrent.CompletableFuture
@@ -110,6 +112,22 @@ class SpaceStateClient(spacePushUrl: String?, userAgent: String, activePeriodsFi
 
     suspend fun directory(): List<DirectoryEntry> = call { service.directory(arena) }.map { it.toKotlin() }
 
+    /** Additive reads preserve original evidence; no missing timestamp is filled with now. */
+    suspend fun spaceObservation(endpoint: String): StatusObservation<SpaceInfo> {
+        val observation = call { service.spaceObservation(endpoint, arena) }
+        return StatusObservation(observation.getValue(arena).toKotlin(), observation.getTiming(arena).toKotlin())
+    }
+
+    suspend fun mainframeRoomsObservation(): StatusObservation<List<MainframeRoom>> {
+        val observation = call { service.mainframeRoomsObservation(arena) }
+        return StatusObservation(observation.getValues(arena).map { it.toKotlin() }, observation.getTiming(arena).toKotlin())
+    }
+
+    suspend fun directoryObservations(): List<StatusObservation<DirectoryEntry>> =
+        call { service.directoryObservations(arena) }.map { observation ->
+            StatusObservation(observation.getValue(arena).toKotlin(), observation.getTiming(arena).toKotlin())
+        }
+
     private suspend fun <T> call(start: () -> CompletableFuture<T>): T = try {
         // SpaceStateKit gives up after 15 seconds. Right after a network change, a request on
         // Android was seen to hang well past that; the deadline keeps it from blocking the next.
@@ -170,6 +188,25 @@ class SpaceStateClient(spacePushUrl: String?, userAgent: String, activePeriodsFi
         BridgeStatus.Discriminator.UNKNOWN -> SpaceStatus.UNKNOWN
     }
 
-    private fun OptionalDouble.toInstant(): Instant? =
-        if (isPresent) Instant.ofEpochMilli((asDouble * 1000).toLong()) else null
+    private fun BridgeReadTiming.toKotlin() = ObservationTiming(
+        source = when (source) {
+            "direct" -> ObservationSource.DIRECT
+            "aggregator" -> ObservationSource.AGGREGATOR
+            "spacePush" -> ObservationSource.SPACE_PUSH
+            else -> ObservationSource.UNKNOWN
+        },
+        observedAt = observedAt.toInstant(),
+        receivedAt = receivedAt.toInstant(),
+        expiresAt = expiresAt.toInstant(),
+    )
+
+    private fun OptionalDouble.toInstant(): Instant? {
+        if (!isPresent) return null
+        val seconds = asDouble
+        if (!seconds.isFinite() || seconds < 0 || seconds > 253_402_300_799.0) return null
+        val whole = floor(seconds).toLong()
+        // Floor the fractional part: an exported expiry must never round later.
+        val nanos = floor((seconds - whole) * 1_000_000_000).toLong().coerceIn(0, 999_999_999)
+        return Instant.ofEpochSecond(whole, nanos)
+    }
 }
