@@ -161,6 +161,7 @@ public final class Space: Sendable {
     public let website: String?
     public let logo: String?
     public let address: String?
+    public let details: SpaceDetails
 
     init(endpoint: String, info: SpaceInfo) {
         self.endpoint = endpoint
@@ -171,6 +172,7 @@ public final class Space: Sendable {
         website = info.website?.absoluteString
         logo = info.logo?.absoluteString
         address = info.location?.address
+        details = SpaceDetails(info)
     }
 }
 
