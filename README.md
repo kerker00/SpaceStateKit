@@ -167,3 +167,22 @@ Changes belong in this repository. Open a branch and pull request, run both CI j
 The sibling workspace can develop SpaceStateCLI against this checkout with `SPACESTATEKIT_PATH=../SpaceStateKit`. Do not copy sources back into the Apple application.
 
 MIT; see [LICENSE.MD](LICENSE.MD).
+
+## Android details (unreleased)
+
+The Android facade's `Space` now has an additive `details` value, and Kotlin
+`SpaceInfo.details` defaults to an empty `SpaceDetails`. It exports access hints,
+country/timezone, a paired finite coordinate, typed contact kinds, keyholders,
+feed kinds/formats, projects, named links and linked-space endpoint/website pairs.
+Existing constructors, status and observation fields retain their behavior.
+
+Empty text and broken optional records do not discard valid neighbours or the
+space's opening state. Web destinations use the shared endpoint validator;
+contacts remain readable values, with protocol actions chosen by the Android UI.
+Invalid/unpaired coordinates have no map target. Details retain the same
+observation evidence as their enclosing space and do not renew its freshness.
+
+These details and the earlier Android observation additions are not included in
+tag 0.3.2. Use the matching Kit and app source branches for composite validation.
+Host Swift regression tests compile the production facade; generated Java/JNI,
+Kotlin compilation and app behavior require the native Linux Android build.

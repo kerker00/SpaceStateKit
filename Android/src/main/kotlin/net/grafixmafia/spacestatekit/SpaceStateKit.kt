@@ -16,6 +16,7 @@ import net.grafixmafia.spacestatekit.bridge.DirectoryItem as BridgeDirectoryItem
 import net.grafixmafia.spacestatekit.bridge.Room as BridgeRoom
 import net.grafixmafia.spacestatekit.bridge.RoomState as BridgeRoomState
 import net.grafixmafia.spacestatekit.bridge.Space as BridgeSpace
+import net.grafixmafia.spacestatekit.bridge.SpaceDetails as BridgeSpaceDetails
 import net.grafixmafia.spacestatekit.bridge.Status as BridgeStatus
 
 /** The public open state of a space, as in SpaceStateKit's `SpaceStatus`. */
@@ -30,6 +31,7 @@ data class SpaceInfo(
     val website: String?,
     val logo: String?,
     val address: String?,
+    val details: SpaceDetails = SpaceDetails(),
 )
 
 /** The states Mainframe's status server reports, as in SpaceStateKit's `MainframeRoomState`. */
@@ -157,7 +159,25 @@ class SpaceStateClient(spacePushUrl: String?, userAgent: String, activePeriodsFi
         website = website.orElse(null),
         logo = logo.orElse(null),
         address = address.orElse(null),
+        details = getDetails(arena).toKotlin(),
     )
+
+    private fun BridgeSpaceDetails.toKotlin() = SpaceDetails(
+        accessHint = accessHint.orElse(null), countryCode = countryCode.orElse(null),
+        timezone = timezone.orElse(null),
+        latitude = latitude.toNumber(), longitude = longitude.toNumber(),
+        contacts = getContacts(arena).map { DetailContact(it.kind, it.value) },
+        keyholders = getKeyholders(arena).map { person ->
+            DetailKeyholder(person.name.orElse(null), person.ircNick.orElse(null),
+                person.getContacts(arena).map { DetailContact(it.kind, it.value) })
+        },
+        feeds = getFeeds(arena).map { DetailFeed(it.kind, it.url, it.format.orElse(null)) },
+        projects = getProjects(arena).toList(),
+        links = getLinks(arena).map { DetailLink(it.name, it.url, it.summary.orElse(null)) },
+        linkedSpaces = getLinkedSpaces(arena).map { DetailLinkedSpace(it.apiEndpoint.orElse(null), it.website.orElse(null)) },
+    )
+
+    private fun OptionalDouble.toNumber(): Double? = if (isPresent && asDouble.isFinite()) asDouble else null
 
     private fun BridgeRoom.toKotlin() = MainframeRoom(
         id = id,
