@@ -50,6 +50,22 @@ public final class SpaceStateService: Sendable {
         try await classified { try await service.directory().map(DirectoryItem.init) }
     }
 
+    /// Additive observation reads. Legacy value-only methods retain their signatures.
+    public func spaceObservation(endpoint: String) async throws -> ObservedSpace {
+        try await classified {
+            let url = try SpaceEndpoint.parse(endpoint)
+            return ObservedSpace(endpoint: endpoint, observation: try await service.spaceObservation(at: url))
+        }
+    }
+
+    public func mainframeRoomsObservation() async throws -> ObservedRooms {
+        try await classified { ObservedRooms(try await service.mainframeRoomsObservation()) }
+    }
+
+    public func directoryObservations() async throws -> [ObservedDirectoryItem] {
+        try await classified { try await service.directoryObservations().map(ObservedDirectoryItem.init) }
+    }
+
     private func classified<Value>(_ body: () async throws -> Value) async throws -> Value {
         do {
             guard !invalidConfiguration else { throw ServiceError.invalidEndpoint }
@@ -150,7 +166,7 @@ public final class Space: Sendable {
         self.endpoint = endpoint
         name = info.name
         status = Status(info.status)
-        lastChange = info.state?.lastChange?.timeIntervalSince1970
+        lastChange = ReadTiming.timestamp(info.state?.lastChange)
         message = info.state?.message
         website = info.website?.absoluteString
         logo = info.logo?.absoluteString
@@ -175,7 +191,7 @@ public final class Room: Sendable {
     init(_ room: MainframeRoom) {
         id = room.id
         name = room.name
-        since = room.since?.timeIntervalSince1970
+        since = ReadTiming.timestamp(room.since)
         switch room.state {
         case .closed: (state, rawState) = (.closed, "none")
         case .keyholder: (state, rawState) = (.keyholder, "keyholder")
@@ -199,5 +215,70 @@ public final class DirectoryItem: Sendable {
         name = entry.info.name
         address = entry.info.location?.address
         status = Status(entry.info.status)
+    }
+}
+
+
+/// Observation evidence in JNI-compatible fields. No client-time substitutes for
+/// missing lastSeen, and no platform-dependent conversion of nonfinite dates.
+public final class ReadTiming: Sendable {
+    /// "direct", "aggregator" or "spacePush"; identifies the read path.
+    public let source: String
+    /// Original successful observation, in seconds since 1970.
+    public let observedAt: Double?
+    /// Successful client receipt, independent of a later failed attempt.
+    public let receivedAt: Double?
+    /// Conservative SDK expiry, including an earlier proxy limit or reachability failure.
+    public let expiresAt: Double?
+
+    init(_ timing: ObservationTiming) {
+        source = timing.source.rawValue
+        receivedAt = Self.timestamp(timing.receivedAt)
+        if let observed = Self.timestamp(timing.observedAt), let receivedAt, observed <= receivedAt {
+            observedAt = observed
+        } else {
+            observedAt = nil
+        }
+        expiresAt = observedAt != nil && receivedAt != nil ? Self.timestamp(timing.expiresAt) : nil
+    }
+
+    // A shared portable range also keeps Android date/duration UI conversions safe.
+    static func timestamp(_ date: Date?) -> Double? {
+        guard let seconds = date?.timeIntervalSince1970, seconds.isFinite,
+              (0...253_402_300_799).contains(seconds) else { return nil }
+        return seconds
+    }
+}
+
+/// Keep the reported value alongside timing; evaluate timing again when displaying.
+public final class ObservedSpace: Sendable {
+    public let value: Space
+    public let timing: ReadTiming
+
+    init(endpoint: String, observation: StatusObservation<SpaceInfo>) {
+        value = Space(endpoint: endpoint, info: observation.value)
+        timing = ReadTiming(observation.timing)
+    }
+}
+
+/// The whole room document has one observation even when its decoded list is empty.
+public final class ObservedRooms: Sendable {
+    public let values: [Room]
+    public let timing: ReadTiming
+
+    init(_ observation: StatusObservation<[MainframeRoom]>) {
+        values = observation.value.map(Room.init)
+        timing = ReadTiming(observation.timing)
+    }
+}
+
+/// Each directory entry retains its own original observation and expiry.
+public final class ObservedDirectoryItem: Sendable {
+    public let value: DirectoryItem
+    public let timing: ReadTiming
+
+    init(_ observation: StatusObservation<DirectoryEntry>) {
+        value = DirectoryItem(observation.value)
+        timing = ReadTiming(observation.timing)
     }
 }

@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- Add observation reads to the Android Swift facade and Kotlin client for spaces,
+  the whole Mainframe room document and individual directory entries. Preserve
+  original source, successful receipt and conservative expiry without filling
+  missing lastSeen or confusing state changes with observation time.
+- Add JNI-compatible observation wrappers and Kotlin `ObservationTiming`,
+  `ObservationFreshness`, `ObservationSource` and `StatusObservation`. Consumers
+  reevaluate retained data; stale or unproven observations supply unknown current
+  status. Existing value-only methods and Kotlin data constructors remain available.
+- Omit nonfinite or nonportable optional dates at the facade boundary and avoid
+  saturating Android timestamp conversions. These changes are not in tag 0.3.2;
+  Android bindings/AAR and app adoption require a native Linux build.
+
 ## 0.3.2 — 2026-10-13
 
 - Add `StatusObservation`, `ObservationTiming`, `ObservationSource` and

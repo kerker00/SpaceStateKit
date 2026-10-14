@@ -119,8 +119,34 @@ Direct reads use a 900-second default retention limit, with clock and policy
 injection available through the new initializer. Successful HTTP receipt proves
 a usable answer was received, not that the upstream physically measured its state
 at that moment. Existing value-only APIs and loader initializers remain available;
-they do not themselves expire locally retained data. Apps, CLI, widgets, website
-and the Android/Kotlin bridge still need to adopt the new observation contract.
+they do not themselves expire locally retained data. Consumer adoption is separate
+from publishing this SDK; consumers must use observation APIs to expire retained values.
+
+## Android observations (unreleased)
+
+The Android Swift facade adds `spaceObservation(endpoint:)`,
+`mainframeRoomsObservation()` and `directoryObservations()`. `ObservedSpace`,
+`ObservedRooms` and `ObservedDirectoryItem` retain reported values alongside
+JNI-compatible `ReadTiming`: read-path source, original observation, successful
+client receipt and conservative expiry. The room document keeps timing even if
+its decoded list is empty; directory observations keep each entry's own evidence.
+Optional dates outside the portable 1970–9999 range are omitted, never replaced
+with the client's current time.
+
+The Kotlin client exposes the corresponding suspend methods as
+`StatusObservation<T>`. Use `observation.timing.currentStatus(reported, now)` or
+`freshness(now)` again when displaying retained data. Expiry is exclusive, a
+backwards clock is unknown, and missing, future or explicitly unreachable
+observations cannot provide a current opening. Receipt and state-change timestamps
+are independent. Failed attempts belong to the app's state; they must not overwrite
+successful observation times. Existing value-only methods remain available.
+
+These Android additions are **not in tag 0.3.2**. Host Swift builds/tests compile
+the production facade without JNI. Generated Java bindings, Kotlin compilation,
+both native ABIs, optimized AAR/app launch and lifecycle behavior still require
+validation on the configured Linux Android toolchain. Host tests do not establish
+native build or runtime compatibility. No AAR publication or new release is
+implied by this source change.
 
 ## Development and verification
 
