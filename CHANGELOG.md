@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Add `SpaceInfo.sensors` with typed numeric/door readings and optional unit,
+  location, name, description and value-change time. Skip invalid entries
+  individually and preserve other sensor kinds as generic JSON, including
+  compound wind/radiation data. Visitor-name and connected-machine lists are
+  omitted from typed readings. Sensor changes do not refresh observation age.
+  Existing constructors default to empty sensors; consumer UI, Kotlin exports
+  and a new release remain separate changes.
 - Add observation reads to the Android Swift facade and Kotlin client for spaces,
   the whole Mainframe room document and individual directory entries. Preserve
   original source, successful receipt and conservative expiry without filling

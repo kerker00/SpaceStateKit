@@ -38,9 +38,48 @@ print(info.name, info.status.rawValue)
 - feeds (blog, wiki, calendar, Flickr), projects, links and linked spaces
 - `api_compatibility` and the older `api` version
 
-Not modelled yet: sensors, membership plans, webcams, areas, SpaceFED, events and `ext_*` fields.
+Not modelled yet: membership plans, webcams, areas, SpaceFED, events and top-level `ext_*` fields.
 
 Decoding is tolerant because many endpoints do not follow the schema exactly. A malformed optional field becomes `nil` or is left out of its array without affecting the rest of the document; only a missing `space` name fails. Every link must be an absolute `http` or `https` URL with a host; other schemes such as `javascript:` or `file:` are dropped. Both icons must pass this check, or the icon pair is dropped.
+
+### Sensors (unreleased)
+
+The current source adds `SpaceInfo.sensors`, defaulting to empty for existing
+initializers and documents without sensors. These models are **not in tag 0.3.2**.
+
+`SpaceInfo.Sensor<Double>` carries numeric temperature, humidity, CO₂
+(`carbonDioxide`), pressure (`barometer`), visitor/member/network counts,
+beverage supply, power consumption and generation. `doorLocked` uses
+`Sensor<Bool>`. Every reading includes the provider's optional `unit`, `location`,
+`name`, `description` and `lastChange`. Numbers must be finite; booleans and
+numeric strings are not converted to numbers. Malformed entries are skipped
+individually; malformed optional metadata does not discard a valid value.
+Units are not inferred or converted, and no physical calibration/range validation
+is performed. Sensor arrays are not synthesized from lone objects.
+
+```swift
+for sensor in info.sensors.temperature {
+    print(sensor.value, sensor.unit ?? "", sensor.location ?? "")
+}
+```
+
+Other sensor kinds remain in `sensors.other` as `SensorData`, preserving JSON
+numbers, booleans, strings, arrays, objects and null. This includes compound wind
+and radiation data, their extra fields and sensor-specific extensions. Such data
+is uninterpreted and can contain malformed readings; consumers must validate it
+before using it. Invalid entries in a known typed kind are dropped rather than
+reappearing in `other`. Visitor `names` and network `machines` lists are not
+included in typed readings or copied into `other`.
+
+Sensor `lastChange` reports a value change, **not** a recent measurement, successful
+fetch or client attempt. Keep the enclosing `StatusObservation` timing when
+presenting retained readings; a recent sensor timestamp never refreshes stale or
+unknown document evidence. Provider metadata is untrusted display text.
+
+This source change adds the shared Swift models only. CLI/Apple presentation,
+Android facade/Kotlin exports and Android UI adoption are separate changes;
+existing consumer pins and dependency versions remain unchanged. No new release
+version, tag or AAR is published by this change.
 
 ## Android
 

@@ -3,7 +3,7 @@ import Foundation
 /// A SpaceAPI document (https://spaceapi.io): the space's state, location, contacts, feeds and links.
 ///
 /// Follows schema v15 and also reads the flat layout of v0.12 and older, which some spaces still serve.
-/// Sensors, membership plans, webcams, areas, SpaceFED and events are not modelled yet.
+/// Membership plans, webcams, areas, SpaceFED and events are not modelled yet.
 public struct SpaceInfo: Sendable, Hashable, Decodable {
     public var name: String
     public var logo: URL?
@@ -17,6 +17,7 @@ public struct SpaceInfo: Sendable, Hashable, Decodable {
     public var projects: [URL]
     public var links: [Link]
     public var linkedSpaces: [LinkedSpace]
+    public var sensors: Sensors
     /// Schema versions the document claims to follow, such as `["14", "15"]`.
     public var apiCompatibility: [String]
     /// The single `api` version of documents older than v14, such as `"0.13"`.
@@ -168,7 +169,7 @@ public struct SpaceInfo: Sendable, Hashable, Decodable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case space, logo, url, location, state, contact, feeds, projects, links
+        case space, logo, url, location, state, contact, feeds, projects, links, sensors
         case linkedSpaces = "linked_spaces"
         case apiCompatibility = "api_compatibility"
         case api
@@ -180,7 +181,7 @@ public struct SpaceInfo: Sendable, Hashable, Decodable {
         name: String, logo: URL? = nil, website: URL? = nil, location: Location? = nil,
         state: State? = nil, contact: Contact = Contact(), calendar: URL? = nil,
         feeds: Feeds = Feeds(), projects: [URL] = [], links: [Link] = [], linkedSpaces: [LinkedSpace] = [],
-        apiCompatibility: [String] = [], legacyAPIVersion: String? = nil
+        apiCompatibility: [String] = [], legacyAPIVersion: String? = nil, sensors: Sensors = Sensors()
     ) {
         self.name = name
         self.logo = logo
@@ -192,6 +193,7 @@ public struct SpaceInfo: Sendable, Hashable, Decodable {
         self.projects = projects
         self.links = links
         self.linkedSpaces = linkedSpaces
+        self.sensors = sensors
         self.apiCompatibility = apiCompatibility
         self.legacyAPIVersion = legacyAPIVersion
         if let calendar { self.calendar = calendar }
@@ -207,6 +209,7 @@ public struct SpaceInfo: Sendable, Hashable, Decodable {
         projects = container.lossyArray(URL.self, forKey: .projects).filter(\.isWebLink)
         links = container.lossyArray(Link.self, forKey: .links)
         linkedSpaces = container.lossyArray(LinkedSpace.self, forKey: .linkedSpaces)
+        sensors = container.lossy(Sensors.self, forKey: .sensors) ?? Sensors()
         apiCompatibility = container.lossyArray(String.self, forKey: .apiCompatibility)
         legacyAPIVersion = container.lossy(String.self, forKey: .api)
 
