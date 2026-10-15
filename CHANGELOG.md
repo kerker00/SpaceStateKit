@@ -2,13 +2,16 @@
 
 ## Unreleased
 
+## 0.3.3 — 2026-10-15
+
 - Add `SpaceInfo.sensors` with typed numeric/door readings and optional unit,
   location, name, description and value-change time. Skip invalid entries
   individually and preserve other sensor kinds as generic JSON, including
   compound wind/radiation data. Visitor-name and connected-machine lists are
   omitted from typed readings. Sensor changes do not refresh observation age.
-  Existing constructors default to empty sensors; consumer UI, Kotlin exports
-  and a new release remain separate changes.
+  Existing constructors default to empty sensors; consumer UI and Kotlin exports
+  remain separate changes. This is a source-only release; consumer pins are not
+  updated automatically.
 - Add observation reads to the Android Swift facade and Kotlin client for spaces,
   the whole Mainframe room document and individual directory entries. Preserve
   original source, successful receipt and conservative expiry without filling
@@ -18,8 +21,15 @@
   reevaluate retained data; stale or unproven observations supply unknown current
   status. Existing value-only methods and Kotlin data constructors remain available.
 - Omit nonfinite or nonportable optional dates at the facade boundary and avoid
-  saturating Android timestamp conversions. These changes are not in tag 0.3.2;
-  Android bindings/AAR and app adoption require a native Linux build.
+  saturating Android timestamp conversions. These changes are not in tag 0.3.2.
+- Add Android detail exports for access hints, country/timezone, valid paired
+  coordinates, contacts/keyholders, feeds, projects, links and linked spaces.
+  Preserve observation evidence; malformed optional details do not discard state.
+  Existing Kotlin constructors keep an empty details default. Correct the
+  generated project String-array getter call to `getProjects()` without an arena.
+- Native Linux debug app/test-bundle compilation and the paired Android JVM test
+  task passed before integration. Optimized ABI/device acceptance and Kotlin sensor
+  exports remain separate; no AARs or platform binaries are distributed here.
 
 ## 0.3.2 — 2026-10-13
 
