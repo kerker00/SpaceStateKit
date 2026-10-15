@@ -15,7 +15,7 @@ The package has no UI dependencies. APNs registration remains an Apple-specific 
 Swift 6.2+, iOS 26+ or macOS 26+ on Apple platforms. CI targets Ubuntu 24.04 x86_64 with Swift 6.2, plus macOS. Linux support is verified by the repository's CI, rather than inferred from conditional imports. ARM64 Linux and static binaries are not yet part of the release acceptance.
 
 ```swift
-.package(url: "https://github.com/kerker00/SpaceStateKit.git", exact: "0.3.2")
+.package(url: "https://github.com/kerker00/SpaceStateKit.git", exact: "0.3.3")
 ```
 
 Import only the products your application needs:
@@ -36,15 +36,16 @@ print(info.name, info.status.rawValue)
 - location (address, coordinates, timezone, country code, access hint)
 - contacts, including XMPP, Mumble, SIP, issue mail, Gopher and keymasters
 - feeds (blog, wiki, calendar, Flickr), projects, links and linked spaces
+- typed common sensors with metadata, plus uninterpreted JSON for other sensor kinds (0.3.3)
 - `api_compatibility` and the older `api` version
 
 Not modelled yet: membership plans, webcams, areas, SpaceFED, events and top-level `ext_*` fields.
 
 Decoding is tolerant because many endpoints do not follow the schema exactly. A malformed optional field becomes `nil` or is left out of its array without affecting the rest of the document; only a missing `space` name fails. Every link must be an absolute `http` or `https` URL with a host; other schemes such as `javascript:` or `file:` are dropped. Both icons must pass this check, or the icon pair is dropped.
 
-### Sensors (unreleased)
+### Sensors (0.3.3)
 
-The current source adds `SpaceInfo.sensors`, defaulting to empty for existing
+Version 0.3.3 adds `SpaceInfo.sensors`, defaulting to empty for existing
 initializers and documents without sensors. These models are **not in tag 0.3.2**.
 
 `SpaceInfo.Sensor<Double>` carries numeric temperature, humidity, CO₂
@@ -76,10 +77,10 @@ fetch or client attempt. Keep the enclosing `StatusObservation` timing when
 presenting retained readings; a recent sensor timestamp never refreshes stale or
 unknown document evidence. Provider metadata is untrusted display text.
 
-This source change adds the shared Swift models only. CLI/Apple presentation,
-Android facade/Kotlin exports and Android UI adoption are separate changes;
-existing consumer pins and dependency versions remain unchanged. No new release
-version, tag or AAR is published by this change.
+These sensor models are available to Swift consumers. CLI/Apple presentation,
+Android facade/Kotlin sensor exports and Android UI adoption are separate changes;
+existing consumer pins and dependency versions remain unchanged. This release
+distributes source only, without AARs or platform binaries.
 
 ## Android
 
@@ -161,7 +162,7 @@ at that moment. Existing value-only APIs and loader initializers remain availabl
 they do not themselves expire locally retained data. Consumer adoption is separate
 from publishing this SDK; consumers must use observation APIs to expire retained values.
 
-## Android observations (unreleased)
+## Android observations (0.3.3)
 
 The Android Swift facade adds `spaceObservation(endpoint:)`,
 `mainframeRoomsObservation()` and `directoryObservations()`. `ObservedSpace`,
@@ -180,12 +181,13 @@ observations cannot provide a current opening. Receipt and state-change timestam
 are independent. Failed attempts belong to the app's state; they must not overwrite
 successful observation times. Existing value-only methods remain available.
 
-These Android additions are **not in tag 0.3.2**. Host Swift builds/tests compile
-the production facade without JNI. Generated Java bindings, Kotlin compilation,
-both native ABIs, optimized AAR/app launch and lifecycle behavior still require
-validation on the configured Linux Android toolchain. Host tests do not establish
-native build or runtime compatibility. No AAR publication or new release is
-implied by this source change.
+These Android additions are available in 0.3.3 source and **not in tag 0.3.2**.
+Host Swift builds/tests compile the production facade without JNI. The paired
+observation/detail sources passed native Linux debug app/test-bundle compilation
+and the Android JVM suite before integration. Optimized builds for both native
+ABIs, AAR/app launch and real lifecycle behavior remain separate device acceptance.
+Host tests do not establish native runtime compatibility. No AAR is distributed
+with this source release, and Swift sensor models are not exported to Kotlin yet.
 
 ## Development and verification
 
@@ -207,7 +209,7 @@ The sibling workspace can develop SpaceStateCLI against this checkout with `SPAC
 
 MIT; see [LICENSE.MD](LICENSE.MD).
 
-## Android details (unreleased)
+## Android details (0.3.3)
 
 The Android facade's `Space` now has an additive `details` value, and Kotlin
 `SpaceInfo.details` defaults to an empty `SpaceDetails`. It exports access hints,
@@ -221,7 +223,9 @@ contacts remain readable values, with protocol actions chosen by the Android UI.
 Invalid/unpaired coordinates have no map target. Details retain the same
 observation evidence as their enclosing space and do not renew its freshness.
 
-These details and the earlier Android observation additions are not included in
-tag 0.3.2. Use the matching Kit and app source branches for composite validation.
-Host Swift regression tests compile the production facade; generated Java/JNI,
-Kotlin compilation and app behavior require the native Linux Android build.
+These details and the earlier Android observation additions are available in
+0.3.3 source and not included in tag 0.3.2. The Kotlin adapter calls the generated
+String-array getter as `getProjects()` without an arena argument. The paired Kit
+and app source commits passed native Linux debug compilation and the JVM test
+task; release/device acceptance remains separate. Composite builds use the actual
+sibling Kit checkout, so a Gradle coordinate alone does not select its source.
