@@ -34,6 +34,17 @@ func realEventStream() async throws {
         for try await _ in client.changes(for: subscription, streamBaseURL: base.appending(component: "missing")) {}
     }
 
+    // Cancelling an open stream must release the session cleanly (no crash at teardown).
+    for _ in 0..<5 {
+        let open = Task {
+            for try await _ in client.changes(for: subscription, streamBaseURL: base.appending(component: "quiet")) {}
+        }
+        try await Task.sleep(for: .milliseconds(200))
+        open.cancel()
+        _ = await open.result
+    }
+    try await Task.sleep(for: .milliseconds(500))
+
     // A silent connection ends at the request's idle limit.
     var request = try client.streamRequest(for: subscription, streamBaseURL: base.appending(component: "quiet"))
     request.timeoutInterval = 0.5

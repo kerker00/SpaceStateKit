@@ -16,6 +16,8 @@ public typealias EventStreamOpener = @Sendable (URLRequest) -> AsyncThrowingStre
 /// Streams a response body chunk by chunk through a URL session delegate.
 /// The request's `timeoutInterval` is the idle limit between chunks; the whole
 /// transfer may last `maximumDuration`. Ending iteration cancels the task.
+/// The session is kept until it reports itself invalid: releasing it while a
+/// cancelled transfer winds down crashes swift-corelibs-foundation.
 /// All mutable state is protected by the lock. URLSession also serializes delegate callbacks.
 public final class EventStreamTransfer: NSObject, URLSessionDataDelegate, @unchecked Sendable {
     /// Longer than SpacePush's one-hour stream lifetime.
@@ -63,7 +65,6 @@ public final class EventStreamTransfer: NSObject, URLSessionDataDelegate, @unche
         lock.lock()
         finished = true
         let session = self.session
-        self.session = nil
         lock.unlock()
         session?.invalidateAndCancel()
     }
@@ -73,10 +74,15 @@ public final class EventStreamTransfer: NSObject, URLSessionDataDelegate, @unche
         guard !finished else { lock.unlock(); return }
         finished = true
         let session = self.session
-        self.session = nil
         lock.unlock()
         session?.invalidateAndCancel()
         continuation.finish(throwing: error)
+    }
+
+    public func urlSession(_ session: URLSession, didBecomeInvalidWithError error: (any Error)?) {
+        lock.lock()
+        self.session = nil
+        lock.unlock()
     }
 
     public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask,
