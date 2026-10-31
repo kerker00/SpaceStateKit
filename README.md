@@ -6,7 +6,7 @@ Shared Swift package for [SpaceState](https://github.com/kerker00/SpaceState) an
 | --- | --- |
 | `SpaceAPI` | SpaceAPI models, tolerant directory decoding and bounded HTTP client |
 | `MainframeStatus` | Optional Mainframe Oldenburg room states |
-| `SpacePushClient` | SpacePush reads, direct-read fallback, active-period reporting and APNs registration |
+| `SpacePushClient` | SpacePush reads, direct-read fallback, active-period reporting, APNs registration and the change stream |
 
 The package has no UI dependencies. APNs registration remains an Apple-specific service operation; Linux consumers can use `SpaceAPI` independently. `SpacePushClient` retains its Mainframe dependency to preserve the existing Apple API.
 
@@ -114,7 +114,41 @@ The default transport streams through `URLSessionDataDelegate` on both platforms
 
 Requests have a 15-second timeout, including a total resource deadline. Swift task cancellation stops the HTTP task. HTTP(S) redirects are followed with URLSession's redirect limit; invalid endpoint redirects and HTTPS-to-HTTP downgrades are refused. Directory names use numeric, case-insensitive comparison in a fixed `en_US_POSIX` locale, with endpoint ordering as a tie breaker.
 
-## Observation age (0.3.2)
+## Change stream (unreleased)
+
+SpacePush can stream confirmed state changes as server-sent events
+(`GET /v1/stream`), for clients that keep a connection open instead of
+receiving APNs notifications, such as a Linux desktop.
+
+```swift
+let client = SpacePushClient(baseURL: URL(string: "https://push.grafixmafia.net")!)
+let feed = ChangeFeed(client: client, subscriptions: [PushSubscription(endpoint: mainframe, room: "radstelle")])
+for try await event in feed.events() {
+    switch event {
+    case .connected: break                 // read the current state now
+    case .change(let change): print(change.name, change.to ?? "test")
+    case .disconnected(let reason, let retryIn): print(reason, retryIn)
+    }
+}
+```
+
+- `SpacePushClient.changes(for:)` is one connection: `.connected`, then
+  `.change` and `.retry` events, ending when the server ends the stream.
+  Error answers throw `SpacePushError.httpStatus` with the server's reason.
+- `ChangeFeed` reconnects: after a failure with jittered exponential backoff
+  (1 s doubling to 5 min, reset by a successful connection), after a normal end
+  with the server's `retry` hint. Answers 400 and 404 end the feed, because
+  retrying cannot fix the subscriptions. Cancelling the iterating task stops it.
+- Nothing is replayed. On every `.connected`, read the current state through
+  `spaceObservation(at:)` or `mainframeRoomsObservation()`.
+- `StateChange` keeps states as strings (`open`, `closed`, `keyholder`, `member`,
+  `open_plus`, `closing`), so a state added on the server is not a decoding error.
+  Test events (`kind == .test`) have no states.
+- A connection that receives nothing for `SpacePushClient.streamIdleTimeout`
+  (60 s, twice the server's heartbeat) fails and is reconnected. Redirects are
+  not followed. `streamBaseURL` serves streams from a different URL, for example
+  a local server's separate stream port.
+
 
 Version 0.3.2 adds `spaceObservation(at:)`, `mainframeRoomsObservation()`
 and `directoryObservations()` to the appropriate clients and `StatusService`.
@@ -197,7 +231,7 @@ swift test
 python3 IntegrationTests/run.py
 ```
 
-The Python runner starts a temporary local HTTP server and exercises the actual networking implementation: success, HTTP errors, redirects, advertised and chunked oversized bodies, directory-sized bodies, timeout, and cancellation. These tests do not require access to production services. Regular unit tests cover the models and all three products.
+The Python runner starts a temporary local HTTP server and exercises the actual networking implementation: success, HTTP errors, redirects, advertised and chunked oversized bodies, directory-sized bodies, timeout, and cancellation. It also checks that server-sent events arrive as they are sent rather than buffered, error answers on the stream and the stream's idle timeout. These tests do not require access to production services. Regular unit tests cover the models and all three products.
 
 ## Maintenance
 
