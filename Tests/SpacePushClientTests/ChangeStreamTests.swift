@@ -51,6 +51,14 @@ private final class ScriptedStreams: Sendable {
     }
 }
 
+private final class Sleeps: Sendable {
+    private let durations = Mutex<[Duration]>([])
+    var all: [Duration] { durations.withLock { $0 } }
+    func sleep(_ duration: Duration) async throws {
+        durations.withLock { $0.append(duration) }
+    }
+}
+
 private let change = """
     event: change
     data: {"endpoint":"https://status.mainframe.io/api/spaceInfo","room":"space","name":"Mainframe","from":"closed","to":"open","at":1}
@@ -106,5 +114,68 @@ struct ChangeStreamTests {
         await #expect(throws: SpacePushError.httpStatus(404, reason: "x")) {
             for try await _ in client.changes(for: [PushSubscription(endpoint: Self.mainframe)], open: streams.opener) {}
         }
+    }
+}
+
+struct ChangeFeedTests {
+    private static func feed(_ streams: ScriptedStreams, _ sleeps: Sleeps) -> ChangeFeed {
+        ChangeFeed(client: SpacePushClient(baseURL: ChangeStreamTests.base),
+                   subscriptions: [PushSubscription(endpoint: ChangeStreamTests.mainframe)],
+                   open: streams.opener, sleep: { try await sleeps.sleep($0) }, jitter: { $0 })
+    }
+
+    @Test func backoffDoublesUpToTheCap() {
+        let feed = Self.feed(ScriptedStreams([]), Sleeps())
+        #expect((1...4).map { feed.backoff(failures: $0) } == [.seconds(1), .seconds(2), .seconds(4), .seconds(8)])
+        #expect(feed.backoff(failures: 20) == .seconds(300))
+    }
+
+    @Test func reconnectsAfterFailuresAndNormalEnds() async throws {
+        let streams = ScriptedStreams([
+            [.fail(URLError(.timedOut))],
+            [.fail(URLError(.cannotConnectToHost))],
+            [.respond(200), .send("retry: 7000\n\n"), .send(change)],
+            [.respond(404)],
+        ])
+        let sleeps = Sleeps()
+        var events: [ChangeFeedEvent] = []
+        do {
+            for try await event in Self.feed(streams, sleeps).events() { events.append(event) }
+            Issue.record("Expected the 404 to end the feed")
+        } catch SpacePushError.httpStatus(let status, _) {
+            #expect(status == 404)
+        }
+        #expect(sleeps.all == [.seconds(1), .seconds(2), .seconds(7)])
+        #expect(events.filter { $0 == .connected }.count == 1)
+        #expect(events.contains { if case .change = $0 { true } else { false } })
+        #expect(streams.all.count == 4)
+    }
+
+    @Test func connectingResetsTheBackoff() async throws {
+        let streams = ScriptedStreams([
+            [.fail(URLError(.timedOut))],
+            [.respond(200), .fail(URLError(.networkConnectionLost))],
+            [.fail(URLError(.timedOut))],
+            [.respond(400)],
+        ])
+        let sleeps = Sleeps()
+        await #expect(throws: SpacePushError.self) {
+            for try await _ in Self.feed(streams, sleeps).events() {}
+        }
+        #expect(sleeps.all == [.seconds(1), .seconds(1), .seconds(2)])
+    }
+
+    @Test func cancellingStopsReconnecting() async throws {
+        let streams = ScriptedStreams(Array(repeating: [.fail(URLError(.timedOut))], count: 1000))
+        let feed = ChangeFeed(client: SpacePushClient(baseURL: ChangeStreamTests.base),
+                              subscriptions: [PushSubscription(endpoint: ChangeStreamTests.mainframe)],
+                              open: streams.opener, sleep: { try await Task.sleep(for: $0) }, jitter: { _ in .milliseconds(1) })
+        let task = Task { for try await _ in feed.events() {} }
+        try await Task.sleep(for: .milliseconds(50))
+        task.cancel()
+        try await task.value
+        let attempts = streams.all.count
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(streams.all.count == attempts)
     }
 }
