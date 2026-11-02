@@ -176,6 +176,7 @@ struct ChangeFeedTests {
         try await task.value
         let attempts = streams.all.count
         try await Task.sleep(for: .milliseconds(50))
-        #expect(streams.all.count == attempts)
+        // An attempt already under way can still open once; reconnecting would add dozens at this delay.
+        #expect(streams.all.count <= attempts + 1)
     }
 }
