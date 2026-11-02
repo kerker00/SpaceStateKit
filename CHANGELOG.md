@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.1 — 2026-11-02
 
 - Fix a crash on Linux: releasing a URL session could abort the process with
   "_MultiHandle deallocated with non-zero retain count", which over HTTPS happened
