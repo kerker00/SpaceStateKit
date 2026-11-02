@@ -15,7 +15,7 @@ The package has no UI dependencies. APNs registration remains an Apple-specific 
 Swift 6.2+, iOS 26+ or macOS 26+ on Apple platforms. CI targets Ubuntu 24.04 x86_64 with Swift 6.2, plus macOS. Linux support is verified by the repository's CI, rather than inferred from conditional imports. ARM64 Linux and static binaries are not yet part of the release acceptance.
 
 ```swift
-.package(url: "https://github.com/kerker00/SpaceStateKit.git", exact: "0.3.3")
+.package(url: "https://github.com/kerker00/SpaceStateKit.git", exact: "0.4.0")
 ```
 
 Import only the products your application needs:
@@ -114,7 +114,7 @@ The default transport streams through `URLSessionDataDelegate` on both platforms
 
 Requests have a 15-second timeout, including a total resource deadline. Swift task cancellation stops the HTTP task. HTTP(S) redirects are followed with URLSession's redirect limit; invalid endpoint redirects and HTTPS-to-HTTP downgrades are refused. Directory names use numeric, case-insensitive comparison in a fixed `en_US_POSIX` locale, with endpoint ordering as a tie breaker.
 
-## Change stream (unreleased)
+## Change stream (0.4.0)
 
 SpacePush can stream confirmed state changes as server-sent events
 (`GET /v1/stream`), for clients that keep a connection open instead of
