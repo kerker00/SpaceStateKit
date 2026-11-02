@@ -4,11 +4,10 @@ import FoundationNetworking
 #endif
 
 /// All mutable state is protected by the lock. URLSession also serializes delegate callbacks.
-final class BoundedHTTPTransfer: NSObject, URLSessionDataDelegate, @unchecked Sendable {
+final class BoundedHTTPTransfer: SharedSessionTaskDelegate, @unchecked Sendable {
     private let lock = NSLock()
     private let maximumBytes: Int
     private var continuation: CheckedContinuation<(Data, URLResponse), any Error>?
-    private var session: URLSession?
     private var task: URLSessionDataTask?
     private var body = Data()
     private var response: URLResponse?
@@ -30,12 +29,8 @@ final class BoundedHTTPTransfer: NSObject, URLSessionDataDelegate, @unchecked Se
                     return
                 }
                 self.continuation = continuation
-                let configuration = URLSessionConfiguration.ephemeral
-                configuration.timeoutIntervalForRequest = request.timeoutInterval
-                configuration.timeoutIntervalForResource = request.timeoutInterval
-                let session = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
-                self.session = session
-                let task = session.dataTask(with: request)
+                let task = SharedURLSessions.shared.dataTask(with: request, requestTimeout: request.timeoutInterval,
+                                                             resourceTimeout: request.timeoutInterval, delegate: self)
                 self.task = task
                 task.resume()
                 lock.unlock()
@@ -53,17 +48,15 @@ final class BoundedHTTPTransfer: NSObject, URLSessionDataDelegate, @unchecked Se
         guard !finished, let continuation else { lock.unlock(); return }
         finished = true
         self.continuation = nil
-        let session = self.session
-        self.session = nil
+        let task = self.task
         self.task = nil
         body = Data()
         lock.unlock()
-        session?.invalidateAndCancel()
+        task?.cancel()
         continuation.resume(with: result)
     }
 
-    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask,
-                    didReceive response: URLResponse,
+    func didReceive(response: URLResponse,
                     completionHandler: @escaping @Sendable (URLSession.ResponseDisposition) -> Void) {
         guard response.expectedContentLength <= Int64(maximumBytes) else {
             completionHandler(.cancel)
@@ -77,7 +70,7 @@ final class BoundedHTTPTransfer: NSObject, URLSessionDataDelegate, @unchecked Se
         completionHandler(finished ? .cancel : .allow)
     }
 
-    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+    func didReceive(data: Data) {
         lock.lock()
         guard !finished else { lock.unlock(); return }
         let tooLarge = data.count > maximumBytes - body.count
@@ -86,7 +79,7 @@ final class BoundedHTTPTransfer: NSObject, URLSessionDataDelegate, @unchecked Se
         if tooLarge { finish(.failure(StatusClientError.responseTooLarge)) }
     }
 
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: (any Error)?) {
+    func didComplete(error: (any Error)?) {
         lock.lock()
         let response = self.response
         let body = self.body
@@ -100,9 +93,8 @@ final class BoundedHTTPTransfer: NSObject, URLSessionDataDelegate, @unchecked Se
         }
     }
 
-    func urlSession(_ session: URLSession, task: URLSessionTask,
-                    willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest,
-                    completionHandler: @escaping @Sendable (URLRequest?) -> Void) {
+    func willRedirect(response: HTTPURLResponse, to request: URLRequest,
+                      completionHandler: @escaping @Sendable (URLRequest?) -> Void) {
         // Follow HTTP(S) redirects but never downgrade an HTTPS request to plaintext.
         let scheme = request.url?.scheme?.lowercased()
         let downgrade = response.url?.scheme?.lowercased() == "https" && scheme == "http"

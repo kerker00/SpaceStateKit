@@ -16,10 +16,8 @@ public typealias EventStreamOpener = @Sendable (URLRequest) -> AsyncThrowingStre
 /// Streams a response body chunk by chunk through a URL session delegate.
 /// The request's `timeoutInterval` is the idle limit between chunks; the whole
 /// transfer may last `maximumDuration`. Ending iteration cancels the task.
-/// The session is kept until it reports itself invalid: releasing it while a
-/// cancelled transfer winds down crashes swift-corelibs-foundation.
 /// All mutable state is protected by the lock. URLSession also serializes delegate callbacks.
-public final class EventStreamTransfer: NSObject, URLSessionDataDelegate, @unchecked Sendable {
+public final class EventStreamTransfer: SharedSessionTaskDelegate, @unchecked Sendable {
     /// Longer than SpacePush's one-hour stream lifetime.
     public static let maximumDuration: TimeInterval = 2 * 60 * 60
     /// The body of an error answer is read up to this size for its reason.
@@ -27,7 +25,7 @@ public final class EventStreamTransfer: NSObject, URLSessionDataDelegate, @unche
 
     private let lock = NSLock()
     private let continuation: AsyncThrowingStream<EventStreamChunk, any Error>.Continuation
-    private var session: URLSession?
+    private var task: URLSessionDataTask?
     private var errorStatus: Int?
     private var errorBody = Data()
     private var finished = false
@@ -49,45 +47,35 @@ public final class EventStreamTransfer: NSObject, URLSessionDataDelegate, @unche
             finish(throwing: EndpointValidationError.invalidEndpoint)
             return
         }
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.timeoutIntervalForRequest = request.timeoutInterval
-        configuration.timeoutIntervalForResource = Self.maximumDuration
-        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
         lock.lock()
         guard !finished else { lock.unlock(); return }
-        let session = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
-        self.session = session
+        let task = SharedURLSessions.shared.dataTask(with: request, requestTimeout: request.timeoutInterval,
+                                                     resourceTimeout: Self.maximumDuration, delegate: self)
+        self.task = task
         lock.unlock()
-        session.dataTask(with: request).resume()
+        task.resume()
     }
 
     private func cancel() {
         lock.lock()
         finished = true
-        let session = self.session
+        let task = self.task
         lock.unlock()
-        session?.invalidateAndCancel()
+        task?.cancel()
     }
 
     private func finish(throwing error: (any Error)?) {
         lock.lock()
         guard !finished else { lock.unlock(); return }
         finished = true
-        let session = self.session
+        let task = self.task
         lock.unlock()
-        session?.invalidateAndCancel()
+        task?.cancel()
         continuation.finish(throwing: error)
     }
 
-    public func urlSession(_ session: URLSession, didBecomeInvalidWithError error: (any Error)?) {
-        lock.lock()
-        self.session = nil
-        lock.unlock()
-    }
-
-    public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask,
-                           didReceive response: URLResponse,
-                           completionHandler: @escaping @Sendable (URLSession.ResponseDisposition) -> Void) {
+    package func didReceive(response: URLResponse,
+                            completionHandler: @escaping @Sendable (URLSession.ResponseDisposition) -> Void) {
         guard let http = response as? HTTPURLResponse else {
             completionHandler(.cancel)
             finish(throwing: URLError(.badServerResponse))
@@ -101,7 +89,7 @@ public final class EventStreamTransfer: NSObject, URLSessionDataDelegate, @unche
         completionHandler(finished ? .cancel : .allow)
     }
 
-    public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+    package func didReceive(data: Data) {
         lock.lock()
         guard !finished else { lock.unlock(); return }
         if errorStatus != nil {
@@ -113,7 +101,7 @@ public final class EventStreamTransfer: NSObject, URLSessionDataDelegate, @unche
         continuation.yield(.data(data))
     }
 
-    public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: (any Error)?) {
+    package func didComplete(error: (any Error)?) {
         lock.lock()
         let status = errorStatus
         let body = errorBody
@@ -126,9 +114,8 @@ public final class EventStreamTransfer: NSObject, URLSessionDataDelegate, @unche
         }
     }
 
-    public func urlSession(_ session: URLSession, task: URLSessionTask,
-                           willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest,
-                           completionHandler: @escaping @Sendable (URLRequest?) -> Void) {
+    package func willRedirect(response: HTTPURLResponse, to request: URLRequest,
+                              completionHandler: @escaping @Sendable (URLRequest?) -> Void) {
         // A stream is never redirected; the redirect itself becomes the answer.
         completionHandler(nil)
     }

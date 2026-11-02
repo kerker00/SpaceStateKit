@@ -11,6 +11,10 @@ func realHTTPTransport() async throws {
     let client = StatusClient()
     #expect(try await client.space(at: base.appendingPathComponent("ok")).status == .open)
     #expect(try await client.space(at: base.appendingPathComponent("redirect")).name == "Test Space")
+    // Requests share URL sessions, but a cookie from one must not reach the next.
+    for _ in 0..<2 {
+        #expect(try await client.space(at: base.appendingPathComponent("cookie")).name == "No cookie")
+    }
     await #expect(throws: StatusClientError.httpStatus(503)) {
         try await client.data(from: base.appendingPathComponent("error"))
     }

@@ -11,6 +11,9 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if '/v1/stream' in self.path: return self.stream()
             if self.path == '/slow': time.sleep(2)
+            if self.path == '/cookie':
+                body = json.dumps({'space': 'Cookie returned' if self.headers.get('Cookie') else 'No cookie', 'state': {'open': True}}).encode()
+                self.send_response(200); self.send_header('Set-Cookie', 'probe=1; Path=/'); self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body); return
             if self.path == '/redirect':
                 self.send_response(302); self.send_header('Location', '/ok'); self.send_header('Content-Length', '0'); self.end_headers(); return
             if self.path == '/oversize':
