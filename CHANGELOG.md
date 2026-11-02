@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Fix a crash on Linux: releasing a URL session could abort the process with
+  "_MultiHandle deallocated with non-zero retain count", which over HTTPS happened
+  within a few requests or cancelled streams. Requests and change streams now use
+  process-wide sessions that are never released. Requests stay independent: no
+  cookies, credentials or cache are kept.
+
 ## 0.4.0 — 2026-11-02
 
 - Add the SpacePush change stream: `ServerSentEventParser`, `StateChange`,

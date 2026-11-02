@@ -33,10 +33,7 @@ struct SpaceEndpointTests {
     }
 
     @Test func redirectsUseEndpointRulesAndKeepDowngradeProtection() async throws {
-        let session = URLSession(configuration: .ephemeral)
-        defer { session.invalidateAndCancel() }
         let source = try #require(URL(string: "https://space.example/api"))
-        let task = session.dataTask(with: source) // Never resumed; only the delegate is exercised.
         let response = try #require(HTTPURLResponse(url: source, statusCode: 302, httpVersion: nil, headerFields: nil))
         let transfer = BoundedHTTPTransfer(maximumBytes: 1024)
         for (string, allowed) in [("https://other.example/api", true), ("http://other.example/api", false),
@@ -44,7 +41,7 @@ struct SpaceEndpointTests {
                                   ("https://other.example/%0A", false), ("file:///tmp/status", false)] {
             let request = URLRequest(url: try #require(URL(string: string)))
             let redirected: URLRequest? = await withCheckedContinuation { continuation in
-                transfer.urlSession(session, task: task, willPerformHTTPRedirection: response, newRequest: request) {
+                transfer.willRedirect(response: response, to: request) {
                     continuation.resume(returning: $0)
                 }
             }
