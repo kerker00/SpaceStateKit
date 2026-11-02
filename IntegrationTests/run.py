@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise URLSession against real local HTTP, including a streaming oversized body."""
+"""Exercise URLSession against real local HTTP, including a streaming oversized body and server-sent events."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import json, os, subprocess, threading, time
@@ -9,6 +9,7 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args): pass
     def do_GET(self):
         try:
+            if '/v1/stream' in self.path: return self.stream()
             if self.path == '/slow': time.sleep(2)
             if self.path == '/redirect':
                 self.send_response(302); self.send_header('Location', '/ok'); self.send_header('Content-Length', '0'); self.end_headers(); return
@@ -25,10 +26,28 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body)
         except (BrokenPipeError, ConnectionResetError): pass
 
+    def chunk(self, text):
+        data = text.encode()
+        self.wfile.write(b'%x\r\n' % len(data) + data + b'\r\n'); self.wfile.flush()
+
+    def stream(self):
+        """Server-sent events like SpacePush: /missing answers 404, /quiet goes silent, others send two changes a second apart."""
+        if self.path.startswith('/missing/'):
+            body = json.dumps({'error': 'unknown_space'}).encode()
+            self.send_response(404); self.send_header('Content-Type', 'application/json'); self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body); return
+        self.send_response(200); self.send_header('Content-Type', 'text/event-stream'); self.send_header('Transfer-Encoding', 'chunked'); self.end_headers()
+        self.chunk('retry: 1000\n\n')
+        if self.path.startswith('/quiet/'): time.sleep(3); return
+        for state in ('open', 'closed'):
+            event = {'endpoint': 'https://a.example/', 'room': 'space', 'name': 'A', 'from': 'x', 'to': state, 'at': 1}
+            self.chunk('event: change\ndata: ' + json.dumps(event) + '\n\n')
+            time.sleep(1)
+        self.chunk(''); self.close_connection = True
+
 if __name__ == '__main__':
     server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
     threading.Thread(target=server.serve_forever,daemon=True).start()
     env=dict(os.environ, SPACESTATE_HTTP_TEST_URL=f'http://127.0.0.1:{server.server_port}')
     try:
-        subprocess.run(['swift','test','--package-path',str(Path(__file__).resolve().parents[1]),'--filter','realHTTPTransport'],env=env,check=True)
+        subprocess.run(['swift','test','--package-path',str(Path(__file__).resolve().parents[1]),'--filter','realHTTPTransport|realEventStream'],env=env,check=True)
     finally: server.shutdown(); server.server_close()

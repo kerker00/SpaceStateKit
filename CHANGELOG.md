@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add the SpacePush change stream: `ServerSentEventParser`, `StateChange`,
+  `SpacePushClient.changes(for:)` over a streaming `EventStreamTransfer`, and
+  `ChangeFeed`, which reconnects with jittered backoff and the server's retry
+  hint. Existing APIs are unchanged.
+
 ## 0.3.3 — 2026-10-15
 
 - Add `SpaceInfo.sensors` with typed numeric/door readings and optional unit,
