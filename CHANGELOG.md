@@ -1,11 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 — 2026-11-02
 
 - Add the SpacePush change stream: `ServerSentEventParser`, `StateChange`,
   `SpacePushClient.changes(for:)` over a streaming `EventStreamTransfer`, and
   `ChangeFeed`, which reconnects with jittered backoff and the server's retry
-  hint. Existing APIs are unchanged.
+  hint. Existing APIs are unchanged. This is a source-only release; consumer pins are
+  not updated automatically.
 
 ## 0.3.3 — 2026-10-15
 
